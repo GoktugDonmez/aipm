@@ -71,3 +71,24 @@ export interface ImportJob {
   createdAt: Date
   completedAt?: Date
 }
+
+export interface QAPair {
+  id: string
+  sessionId: string // Reference to original ChatGPT session (if applicable)
+  question: string // User's question
+  answer: string // Assistant's answer
+  source: 'import' | 'manual' | 'extension'
+  createdAt: Date
+  updatedAt: Date
+  
+  // Metadata for future clustering/embedding
+  embeddingId?: string // Reference to embedding when generated
+  clusterId?: string // Reference to cluster when assigned
+  tags: string[]
+  
+  // Context from original conversation
+  originalMessageIds?: {
+    questionId: string
+    answerId: string
+  }
+}

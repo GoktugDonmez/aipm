@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Card, Button, Flex, Text, Progress } from '@radix-ui/themes'
 import { Upload } from 'lucide-react'
-import { ChatGPTImportAdapter, importFile } from './importService'
+import { ChatGPTImportAdapter, importFile, parseFileForQAPairs, ExtractedQAPair } from './importService'
+import QASelectionModal from './QASelectionModal'
 
 interface ImportUploadProps {
   onImportComplete?: () => void
@@ -11,6 +12,8 @@ export default function ImportUpload({ onImportComplete }: ImportUploadProps) {
   const [importing, setImporting] = useState(false)
   const [progress, setProgress] = useState(0)
   const [error, setError] = useState<string | null>(null)
+  const [showQASelection, setShowQASelection] = useState(false)
+  const [extractedQAPairs, setExtractedQAPairs] = useState<ExtractedQAPair[]>([])
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -22,15 +25,35 @@ export default function ImportUpload({ onImportComplete }: ImportUploadProps) {
 
     try {
       const adapter = new ChatGPTImportAdapter()
-      await importFile(file, adapter, setProgress)
       
-      onImportComplete?.()
+      // First, parse the file to extract QA pairs
+      setProgress(20)
+      const qaPairs = await parseFileForQAPairs(file, adapter)
+      
+      if (qaPairs.length > 0) {
+        // Show QA selection modal
+        setExtractedQAPairs(qaPairs)
+        setShowQASelection(true)
+        setImporting(false)
+        setProgress(0)
+      } else {
+        // No QA pairs found, proceed with regular import
+        await importFile(file, adapter, (p) => setProgress(20 + (p * 0.8)))
+        onImportComplete?.()
+        setImporting(false)
+        setProgress(0)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Import failed')
-    } finally {
       setImporting(false)
       setProgress(0)
     }
+  }
+
+  const handleQAImportComplete = () => {
+    setShowQASelection(false)
+    setExtractedQAPairs([])
+    onImportComplete?.()
   }
 
   return (
@@ -81,10 +104,20 @@ export default function ImportUpload({ onImportComplete }: ImportUploadProps) {
           </Button>
         </label>
 
-        <Text size="1" color="gray">
-          Tip: You can also load mock data for testing
-        </Text>
       </Flex>
+
+      {/* QA Selection Modal */}
+      {showQASelection && (
+        <QASelectionModal
+          open={showQASelection}
+          onClose={() => {
+            setShowQASelection(false)
+            setExtractedQAPairs([])
+          }}
+          qaPairs={extractedQAPairs}
+          onImportComplete={handleQAImportComplete}
+        />
+      )}
     </Card>
   )
 }

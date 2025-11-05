@@ -1,10 +1,20 @@
 // Placeholder for import service adapters
 
 import { ChatSession, Message, ImportJob } from '@/types'
+import { extractQAPairsFromMessages } from '@/features/qa/qaService'
 
 export interface ImportAdapter {
   parse(file: File): Promise<{ sessions: ChatSession[]; messages: Message[] }>
   validate(file: File): Promise<boolean>
+}
+
+export interface ExtractedQAPair {
+  question: string
+  answer: string
+  questionId: string
+  answerId: string
+  sessionId: string
+  sessionTitle: string
 }
 
 interface ChatGPTExport {
@@ -77,6 +87,31 @@ export class ChatGPTImportAdapter implements ImportAdapter {
   }
 }
 
+/**
+ * Extract QA pairs from imported conversations
+ */
+export async function extractQAPairsFromImport(
+  sessions: ChatSession[],
+  messages: Message[]
+): Promise<ExtractedQAPair[]> {
+  const extractedPairs: ExtractedQAPair[] = []
+  
+  for (const session of sessions) {
+    const sessionMessages = messages.filter(m => m.sessionId === session.id)
+    const pairs = extractQAPairsFromMessages(sessionMessages)
+    
+    pairs.forEach(pair => {
+      extractedPairs.push({
+        ...pair,
+        sessionId: session.id,
+        sessionTitle: session.title,
+      })
+    })
+  }
+  
+  return extractedPairs
+}
+
 export async function importFile(
   file: File,
   adapter: ImportAdapter,
@@ -117,4 +152,22 @@ export async function importFile(
     createdAt: new Date(),
     completedAt: new Date(),
   }
+}
+
+/**
+ * Parse file and extract QA pairs without importing
+ * Used for QA selection modal
+ */
+export async function parseFileForQAPairs(
+  file: File,
+  adapter: ImportAdapter
+): Promise<ExtractedQAPair[]> {
+  const isValid = await adapter.validate(file)
+  
+  if (!isValid) {
+    throw new Error('Invalid file format')
+  }
+
+  const { sessions, messages } = await adapter.parse(file)
+  return extractQAPairsFromImport(sessions, messages)
 }

@@ -1,44 +1,25 @@
-import { Heading, Text, Card, Flex, Button, Grid, Callout } from '@radix-ui/themes'
-import { Database, FileText, MessageSquare, Sparkles, AlertCircle } from 'lucide-react'
+import { Heading, Text, Card, Flex, Button, Grid, Badge } from '@radix-ui/themes'
+import { Database, FileText, MessageSquare, Plus } from 'lucide-react'
 import ImportUpload from '@/features/import/ImportUpload'
-import { useStats, useSessions } from '@/lib/hooks'
+import ManualQAInput from '@/features/import/ManualQAInput'
+import ExtensionDataReceiver from '@/features/import/ExtensionDataReceiver'
+import { useStats, useSessions, useQAConversations } from '@/lib/hooks'
 import { useState } from 'react'
 import ConversationModal from '@/components/ConversationModal'
+import QAConversationModal from '@/components/QAConversationModal'
 import { ChatSession } from '@/types'
 
 export default function Dashboard() {
-  const { sessionCount, messageCount, tagCount } = useStats()
+  const { sessionCount, messageCount, tagCount, qaPairCount } = useStats()
   const { sessions } = useSessions()
+  const { conversations: qaConversations } = useQAConversations()
   const [refreshKey, setRefreshKey] = useState(0)
-  const [loadingMock, setLoadingMock] = useState(false)
-  const [mockError, setMockError] = useState<string | null>(null)
   const [selectedSession, setSelectedSession] = useState<ChatSession | null>(null)
+  const [selectedQAConversation, setSelectedQAConversation] = useState<{ id: string; title: string } | null>(null)
+  const [showManualQA, setShowManualQA] = useState(false)
 
   const handleImportComplete = () => {
     setRefreshKey(prev => prev + 1)
-  }
-
-  const loadMockData = async () => {
-    setLoadingMock(true)
-    setMockError(null)
-    
-    try {
-      const response = await fetch('/src/mocks/chatgpt-conversations.json')
-      if (!response.ok) throw new Error('Failed to load mock data')
-      
-      const mockData = await response.text()
-      const blob = new Blob([mockData], { type: 'application/json' })
-      const file = new File([blob], 'mock-conversations.json', { type: 'application/json' })
-      
-      const { ChatGPTImportAdapter, importFile } = await import('@/features/import/importService')
-      const adapter = new ChatGPTImportAdapter()
-      await importFile(file, adapter)
-      handleImportComplete()
-    } catch (error) {
-      setMockError(error instanceof Error ? error.message : 'Failed to load mock data')
-    } finally {
-      setLoadingMock(false)
-    }
   }
 
   return (
@@ -51,44 +32,31 @@ export default function Dashboard() {
       </Text>
 
       <Flex gap="4" direction="column">
-        {/* Demo Data Card - Always Visible */}
-        <Card style={{ background: 'var(--accent-2)', borderColor: 'var(--accent-6)' }}>
+        <ImportUpload onImportComplete={handleImportComplete} />
+
+        {/* Extension Data Receiver */}
+        <ExtensionDataReceiver onImportComplete={handleImportComplete} />
+
+        {/* Manual QA Input Card */}
+        <Card>
           <Flex direction="column" gap="3">
             <Flex align="center" gap="2" justify="between">
               <Flex align="center" gap="2">
-                <Sparkles size={20} color="var(--accent-11)" />
-                <Text size="3" weight="bold">
-                  Demo Mode
+                <Plus size={24} />
+                <Text size="5" weight="bold">
+                  Add QA Pair Manually
                 </Text>
               </Flex>
-              <Button 
-                variant="soft" 
-                onClick={loadMockData} 
-                disabled={loadingMock}
-                color="blue"
-              >
-                <Sparkles size={16} />
-                {loadingMock ? 'Loading...' : 'Load Sample Conversations'}
+              <Button onClick={() => setShowManualQA(true)}>
+                <Plus size={16} />
+                Add QA Pair
               </Button>
             </Flex>
-            
-            <Text size="2" color="gray">
-              Load 5 sample ChatGPT conversations (Python, React, ML, Databases, TypeScript) 
-              to explore search and visualization features.
+            <Text color="gray" size="2">
+              Manually enter a question and answer pair to add to your knowledge base.
             </Text>
-
-            {mockError && (
-              <Callout.Root color="red" size="1">
-                <Callout.Icon>
-                  <AlertCircle size={16} />
-                </Callout.Icon>
-                <Callout.Text>{mockError}</Callout.Text>
-              </Callout.Root>
-            )}
           </Flex>
         </Card>
-
-        <ImportUpload onImportComplete={handleImportComplete} />
 
         <Card>
           <Flex direction="column" gap="3">
@@ -97,15 +65,15 @@ export default function Dashboard() {
               <Heading size="5">Your Corpus</Heading>
             </Flex>
             
-            {sessionCount === 0 ? (
+            {sessionCount === 0 && qaPairCount === 0 ? (
               <Flex direction="column" gap="3">
                 <Text color="gray">
-                  No conversations imported yet. Use the demo data above or import your own ChatGPT export.
+                  No data imported yet. Import your ChatGPT export, add QA pairs manually, or use the Chrome extension to add data.
                 </Text>
               </Flex>
             ) : (
               <>
-                <Grid columns="3" gap="4">
+                <Grid columns="4" gap="4">
                   <Flex direction="column" gap="1">
                     <Text weight="bold" size="6">
                       {sessionCount}
@@ -124,6 +92,14 @@ export default function Dashboard() {
                   </Flex>
                   <Flex direction="column" gap="1">
                     <Text weight="bold" size="6">
+                      {qaPairCount}
+                    </Text>
+                    <Text size="2" color="gray">
+                      QA Pairs
+                    </Text>
+                  </Flex>
+                  <Flex direction="column" gap="1">
+                    <Text weight="bold" size="6">
                       {tagCount}
                     </Text>
                     <Text size="2" color="gray">
@@ -132,38 +108,82 @@ export default function Dashboard() {
                   </Flex>
                 </Grid>
 
-                <Flex direction="column" gap="2" mt="3">
-                  <Text size="3" weight="bold">
-                    Recent Conversations
-                  </Text>
-                  {sessions.slice(0, 5).map((session) => (
-                    <Card 
-                      key={session.id} 
-                      variant="surface"
-                      style={{ cursor: 'pointer', transition: 'all 0.2s' }}
-                      onClick={() => setSelectedSession(session)}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'var(--accent-3)'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = ''
-                      }}
-                    >
-                      <Flex align="center" gap="2">
-                        <MessageSquare size={16} />
-                        <Flex direction="column" gap="1" style={{ flex: 1 }}>
-                          <Text weight="bold" size="2">
-                            {session.title}
-                          </Text>
-                          <Text size="1" color="gray">
-                            {session.messageCount} messages · {session.updatedAt.toLocaleDateString()}
-                          </Text>
+                {/* All Conversations (Sessions + QA Conversations) */}
+                {(sessions.length > 0 || qaConversations.length > 0) && (
+                  <Flex direction="column" gap="2" mt="3">
+                    <Text size="3" weight="bold">
+                      Recent Conversations
+                    </Text>
+                    
+                    {/* Display regular sessions */}
+                    {sessions.slice(0, 5).map((session) => (
+                      <Card 
+                        key={session.id} 
+                        variant="surface"
+                        style={{ cursor: 'pointer', transition: 'all 0.2s' }}
+                        onClick={() => setSelectedSession(session)}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = 'var(--accent-3)'
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = ''
+                        }}
+                      >
+                        <Flex align="center" gap="2">
+                          <MessageSquare size={16} />
+                          <Flex direction="column" gap="1" style={{ flex: 1 }}>
+                            <Text weight="bold" size="2">
+                              {session.title}
+                            </Text>
+                            <Text size="1" color="gray">
+                              {session.messageCount} messages · {session.updatedAt.toLocaleDateString()}
+                            </Text>
+                          </Flex>
+                          <FileText size={14} color="gray" />
                         </Flex>
-                        <FileText size={14} color="gray" />
-                      </Flex>
-                    </Card>
-                  ))}
-                </Flex>
+                      </Card>
+                    ))}
+                    
+                    {/* Display QA conversations */}
+                    {qaConversations.slice(0, 5).map((conv) => (
+                      <Card 
+                        key={conv.id} 
+                        variant="surface"
+                        style={{ cursor: 'pointer', transition: 'all 0.2s' }}
+                        onClick={() => setSelectedQAConversation({ id: conv.id, title: conv.title })}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = 'var(--accent-3)'
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = ''
+                        }}
+                      >
+                        <Flex align="center" gap="2">
+                          <MessageSquare size={16} />
+                          <Flex direction="column" gap="1" style={{ flex: 1 }}>
+                            <Text weight="bold" size="2" style={{
+                              display: '-webkit-box',
+                              WebkitLineClamp: 1,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden',
+                            }}>
+                              {conv.title}
+                            </Text>
+                            <Flex align="center" gap="2" wrap="wrap">
+                              <Badge variant="soft" size="1">
+                                {conv.source}
+                              </Badge>
+                              <Text size="1" color="gray">
+                                {conv.qaPairCount} QA pairs · {conv.updatedAt.toLocaleDateString()}
+                              </Text>
+                            </Flex>
+                          </Flex>
+                          <FileText size={14} color="gray" />
+                        </Flex>
+                      </Card>
+                    ))}
+                  </Flex>
+                )}
               </>
             )}
           </Flex>
@@ -178,6 +198,27 @@ export default function Dashboard() {
           onClose={() => setSelectedSession(null)}
         />
       )}
+
+      {/* QA Conversation Modal */}
+      {selectedQAConversation && (
+        <QAConversationModal
+          conversationId={selectedQAConversation.id}
+          conversationTitle={selectedQAConversation.title}
+          open={!!selectedQAConversation}
+          onClose={() => setSelectedQAConversation(null)}
+          onDelete={() => {
+            setSelectedQAConversation(null)
+            handleImportComplete()
+          }}
+        />
+      )}
+
+      {/* Manual QA Input Modal */}
+      <ManualQAInput
+        open={showManualQA}
+        onClose={() => setShowManualQA(false)}
+        onSave={handleImportComplete}
+      />
     </div>
   )
 }
