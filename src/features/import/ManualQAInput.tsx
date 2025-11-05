@@ -91,8 +91,8 @@ export default function ManualQAInput({
       onSave?.()
       onClose()
     } catch (error) {
-      console.error('Failed to save QA pairs:', error)
-      alert('Failed to save QA pairs. Please try again.')
+      console.error('Failed to save interactions:', error)
+      alert('Failed to save interactions. Please try again.')
     } finally {
       setSaving(false)
     }
@@ -114,10 +114,10 @@ export default function ManualQAInput({
           <Flex justify="between" align="start" gap="3">
             <Flex direction="column" gap="2" style={{ flex: 1 }}>
               <Dialog.Title size="6">
-                Add QA Pairs Manually
+                Add Interactions Manually
               </Dialog.Title>
               <Text size="2" color="gray">
-                Build a conversation by adding multiple question-answer pairs. Each question should be followed by its answer.
+                Build a conversation by adding multiple interactions. Each question should be followed by its answer.
               </Text>
             </Flex>
             <Dialog.Close>
@@ -125,18 +125,6 @@ export default function ManualQAInput({
                 <X size={20} />
               </Button>
             </Dialog.Close>
-          </Flex>
-
-          {/* Stats */}
-          <Flex gap="2" align="center">
-            <Badge variant="soft">
-              {qaPairs.length} pair{qaPairs.length !== 1 ? 's' : ''}
-            </Badge>
-            {validPairsCount > 0 && (
-              <Badge color="green" variant="soft">
-                {validPairsCount} ready to save
-              </Badge>
-            )}
           </Flex>
 
           {/* Main Content */}
@@ -196,7 +184,7 @@ export default function ManualQAInput({
                 </ScrollArea>
                 <Button variant="soft" size="2" onClick={addNewQAPair} style={{ width: '100%' }}>
                   <Plus size={14} />
-                  Add QA Pair
+                  Add Interaction
                 </Button>
               </Flex>
             </Card>
@@ -209,12 +197,6 @@ export default function ManualQAInput({
                   
                   return (
                     <Flex key={pair.id} direction="column" gap="3">
-                      <Flex align="center" gap="2">
-                        <Badge variant="soft">
-                          Pair {index + 1} of {qaPairs.length}
-                        </Badge>
-                      </Flex>
-
                       {/* Question */}
                       <Card>
                         <Flex direction="column" gap="2">
@@ -279,17 +261,22 @@ export default function ManualQAInput({
           </Flex>
 
           {/* Footer */}
-          <Flex gap="2" justify="end" pt="2" style={{ borderTop: '1px solid var(--gray-6)' }}>
-            <Dialog.Close>
-              <Button variant="soft">Cancel</Button>
-            </Dialog.Close>
-            <Button
-              onClick={handleSave}
-              disabled={validPairsCount === 0 || saving}
-            >
-              <Save size={16} />
-              {saving ? 'Saving...' : `Save ${validPairsCount} QA Pair${validPairsCount !== 1 ? 's' : ''}`}
-            </Button>
+          <Flex gap="2" justify="between" align="center" pt="2" style={{ borderTop: '1px solid var(--gray-6)' }}>
+            <Badge color={validPairsCount > 0 ? 'green' : 'gray'} variant="soft">
+              {validPairsCount} ready to save
+            </Badge>
+            <Flex gap="2">
+              <Dialog.Close>
+                <Button variant="soft">Cancel</Button>
+              </Dialog.Close>
+              <Button
+                onClick={handleSave}
+                disabled={validPairsCount === 0 || saving}
+              >
+                <Save size={16} />
+                {saving ? 'Saving...' : 'Save'}
+              </Button>
+            </Flex>
           </Flex>
         </Flex>
       </Dialog.Content>

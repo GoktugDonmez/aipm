@@ -72,8 +72,7 @@ export default function Settings() {
                     </Text>
                     <Text as="ul" style={{ marginLeft: '1.5rem' }}>
                       <li>All conversations</li>
-                      <li>All messages</li>
-                      <li>All QA pairs</li>
+                      <li>All interactions</li>
                       <li>All tags</li>
                       <li>All embeddings</li>
                     </Text>

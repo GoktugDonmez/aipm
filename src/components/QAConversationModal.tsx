@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Dialog, Flex, Text, Badge, ScrollArea, Card, Button, AlertDialog } from '@radix-ui/themes'
+import { Dialog, Flex, Text, ScrollArea, Card, Button, AlertDialog } from '@radix-ui/themes'
 import { MessageSquare, User, Bot, X, Trash2 } from 'lucide-react'
 import { QAPair } from '@/types'
 import { useQAPairsBySession } from '@/lib/hooks'
@@ -47,12 +47,16 @@ export default function QAConversationModal({
           <Flex justify="between" align="start" gap="3">
             <Flex direction="column" gap="2" style={{ flex: 1 }}>
               <Dialog.Title size="6">{conversationTitle}</Dialog.Title>
-              <Flex gap="2" wrap="wrap">
-                <Badge color="blue">{qaPairs[0]?.source || 'manual'}</Badge>
-                <Badge variant="soft">{qaPairs.length} QA pairs</Badge>
-                <Badge variant="outline">
-                  {qaPairs[0]?.createdAt.toLocaleDateString()}
-                </Badge>
+              <Flex gap="2" wrap="wrap" align="center">
+                <Text size="2" color="gray" style={{ textTransform: 'capitalize' }}>
+                  {qaPairs[0]?.source === 'manual' ? 'Manual' : qaPairs[0]?.source || 'Manual'}
+                </Text>
+                <Text size="2" color="gray">
+                  · {qaPairs.length} {qaPairs.length === 1 ? 'interaction' : 'interactions'}
+                </Text>
+                <Text size="2" color="gray">
+                  · {qaPairs[0]?.createdAt.toLocaleDateString()}
+                </Text>
               </Flex>
             </Flex>
             <Dialog.Close>
@@ -116,18 +120,18 @@ export default function QAConversationModal({
           </ScrollArea>
 
           {/* Footer Actions */}
-          <Flex gap="2" justify="between" pt="2" style={{ borderTop: '1px solid var(--gray-6)' }}>
+          <Flex gap="2" justify="between" pt="3" style={{ borderTop: '1px solid var(--gray-6)' }}>
             <AlertDialog.Root open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
               <AlertDialog.Trigger>
-                <Button variant="soft" color="red" disabled={deleting}>
+                <Button variant="ghost" color="red" disabled={deleting}>
                   <Trash2 size={16} />
-                  Delete Conversation
+                  Delete
                 </Button>
               </AlertDialog.Trigger>
               <AlertDialog.Content>
                 <AlertDialog.Title>Delete Conversation</AlertDialog.Title>
                 <AlertDialog.Description>
-                  Are you sure you want to delete this conversation? This will permanently delete all {qaPairs.length} QA pair{qaPairs.length !== 1 ? 's' : ''} in this conversation. This action cannot be undone.
+                  Are you sure you want to delete this conversation? This will permanently delete all {qaPairs.length} interaction{qaPairs.length !== 1 ? 's' : ''} in this conversation. This action cannot be undone.
                 </AlertDialog.Description>
                 <Flex gap="3" mt="4" justify="end">
                   <AlertDialog.Cancel>
@@ -141,10 +145,6 @@ export default function QAConversationModal({
                 </Flex>
               </AlertDialog.Content>
             </AlertDialog.Root>
-
-            <Dialog.Close>
-              <Button>Close</Button>
-            </Dialog.Close>
           </Flex>
         </Flex>
       </Dialog.Content>

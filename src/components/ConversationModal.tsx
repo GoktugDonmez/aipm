@@ -22,7 +22,7 @@ export default function ConversationModal({ session, open, onClose }: Conversati
               <Dialog.Title size="6">{session.title}</Dialog.Title>
               <Flex gap="2" wrap="wrap">
                 <Badge color="blue">{session.source}</Badge>
-                <Badge variant="soft">{session.messageCount} messages</Badge>
+                <Badge variant="soft">{session.messageCount} interactions</Badge>
                 <Badge variant="outline">
                   {session.updatedAt.toLocaleDateString()}
                 </Badge>
@@ -105,21 +105,6 @@ export default function ConversationModal({ session, open, onClose }: Conversati
             </Flex>
           </ScrollArea>
 
-          {/* Footer Actions */}
-          <Flex gap="2" justify="end" pt="2" style={{ borderTop: '1px solid var(--gray-6)' }}>
-            <Button variant="soft" disabled>
-              Export
-            </Button>
-            <Button variant="soft" disabled>
-              Share
-            </Button>
-            <Button variant="soft" disabled>
-              Analyze with AI
-            </Button>
-            <Dialog.Close>
-              <Button>Close</Button>
-            </Dialog.Close>
-          </Flex>
         </Flex>
       </Dialog.Content>
     </Dialog.Root>

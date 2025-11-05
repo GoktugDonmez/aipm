@@ -69,7 +69,7 @@ export default function ExtensionDataReceiver({ onImportComplete }: { onImportCo
       onImportComplete?.()
     } catch (error) {
       console.error('Failed to import extension data:', error)
-      alert('Failed to import QA pairs from extension. Please try again.')
+      alert('Failed to import interactions from extension. Please try again.')
     } finally {
       setImporting(false)
     }
@@ -121,7 +121,7 @@ export default function ExtensionDataReceiver({ onImportComplete }: { onImportCo
               Extension Data Received
             </Text>
             <Badge color="violet" size="2">
-              {extensionData.qaPairs.length} QA pairs
+              {extensionData.qaPairs.length} interactions
             </Badge>
           </Flex>
         </Flex>
@@ -133,7 +133,7 @@ export default function ExtensionDataReceiver({ onImportComplete }: { onImportCo
         <Flex gap="2">
           <Button onClick={handleImport} disabled={importing}>
             <Download size={16} />
-            {importing ? 'Importing...' : 'Import QA Pairs'}
+            {importing ? 'Importing...' : 'Import Interactions'}
           </Button>
           <Button variant="soft" onClick={handleDismiss}>
             Dismiss

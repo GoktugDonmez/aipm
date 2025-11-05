@@ -80,8 +80,8 @@ export default function QASelectionModal({
       onImportComplete?.()
       onClose()
     } catch (error) {
-      console.error('Failed to import QA pairs:', error)
-      alert('Failed to import QA pairs. Please try again.')
+      console.error('Failed to import interactions:', error)
+      alert('Failed to import interactions. Please try again.')
     } finally {
       setImporting(false)
     }
@@ -107,10 +107,10 @@ export default function QASelectionModal({
           <Flex justify="between" align="start" gap="3">
             <Flex direction="column" gap="2" style={{ flex: 1 }}>
               <Dialog.Title size="6">
-                Select QA Pairs to Import
+                Select Interactions to Import
               </Dialog.Title>
               <Text size="2" color="gray">
-                Found {qaPairs.length} question-answer pairs. Select which ones to add to your knowledge base.
+                Found {qaPairs.length} interactions. Select which ones to add to your knowledge base.
               </Text>
             </Flex>
             <Dialog.Close>
@@ -227,7 +227,7 @@ export default function QASelectionModal({
               <Button variant="soft">Cancel</Button>
             </Dialog.Close>
             <Button onClick={handleImport} disabled={selectedIndices.size === 0 || importing}>
-              {importing ? 'Importing...' : `Import ${selectedIndices.size} QA Pair${selectedIndices.size !== 1 ? 's' : ''}`}
+              {importing ? 'Importing...' : `Import ${selectedIndices.size} Interaction${selectedIndices.size !== 1 ? 's' : ''}`}
             </Button>
           </Flex>
         </Flex>

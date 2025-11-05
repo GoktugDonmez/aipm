@@ -189,7 +189,7 @@ export default function Search() {
                   </Text>
 
                   <Text size="1" color="gray">
-                    {session?.updatedAt.toLocaleDateString()} · {session?.messageCount} messages
+                    {session?.updatedAt.toLocaleDateString()} · {session?.messageCount} interactions
                   </Text>
                 </Flex>
               </Card>

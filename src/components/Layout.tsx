@@ -12,7 +12,7 @@ export default function Layout({ children }: LayoutProps) {
   const location = useLocation()
 
   const navItems = [
-    { path: '/', icon: Home, label: 'Dashboard' },
+    { path: '/', icon: Home, label: 'Corpus' },
     { path: '/search', icon: Search, label: 'Search' },
     { path: '/visualize', icon: GitBranch, label: 'Visualize' },
     { path: '/settings', icon: Settings, label: 'Settings' },

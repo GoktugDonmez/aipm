@@ -1,6 +1,6 @@
-import { Heading, Text, Card, Flex, Button, Grid, Badge } from '@radix-ui/themes'
-import { Database, FileText, MessageSquare, Plus } from 'lucide-react'
-import ImportUpload from '@/features/import/ImportUpload'
+import { Text, Card, Flex, Button, Grid } from '@radix-ui/themes'
+import { Database, Plus } from 'lucide-react'
+// import ImportUpload from '@/features/import/ImportUpload' // Hidden - ChatGPT doesn't provide file exports
 import ManualQAInput from '@/features/import/ManualQAInput'
 import ExtensionDataReceiver from '@/features/import/ExtensionDataReceiver'
 import { useStats, useSessions, useQAConversations } from '@/lib/hooks'
@@ -10,7 +10,7 @@ import QAConversationModal from '@/components/QAConversationModal'
 import { ChatSession } from '@/types'
 
 export default function Dashboard() {
-  const { sessionCount, messageCount, tagCount, qaPairCount } = useStats()
+  const { conversationCount, messageCount, tagCount } = useStats()
   const { sessions } = useSessions()
   const { conversations: qaConversations } = useQAConversations()
   const [refreshKey, setRefreshKey] = useState(0)
@@ -24,171 +24,169 @@ export default function Dashboard() {
 
   return (
     <div key={refreshKey}>
-      <Heading size="8" mb="2">
-        Dashboard
-      </Heading>
-      <Text size="3" color="gray" mb="6">
-        Welcome to Memoria - Your AI conversation memory
-      </Text>
-
-      <Flex gap="4" direction="column">
-        <ImportUpload onImportComplete={handleImportComplete} />
-
+      <Flex gap="6" direction="column">
         {/* Extension Data Receiver */}
         <ExtensionDataReceiver onImportComplete={handleImportComplete} />
 
-        {/* Manual QA Input Card */}
-        <Card>
-          <Flex direction="column" gap="3">
-            <Flex align="center" gap="2" justify="between">
-              <Flex align="center" gap="2">
-                <Plus size={24} />
-                <Text size="5" weight="bold">
-                  Add QA Pair Manually
-                </Text>
-              </Flex>
-              <Button onClick={() => setShowManualQA(true)}>
-                <Plus size={16} />
-                Add QA Pair
-              </Button>
+        {/* Stats */}
+        <Grid columns="3" gap="4">
+          <Card variant="surface">
+            <Flex direction="column" gap="1">
+              <Text weight="bold" size="7">
+                {conversationCount}
+              </Text>
+              <Text size="2" color="gray">
+                Conversations
+              </Text>
             </Flex>
-            <Text color="gray" size="2">
-              Manually enter a question and answer pair to add to your knowledge base.
-            </Text>
-          </Flex>
-        </Card>
-
-        <Card>
-          <Flex direction="column" gap="3">
-            <Flex align="center" gap="2">
-              <Database size={24} />
-              <Heading size="5">Your Corpus</Heading>
+          </Card>
+          <Card variant="surface">
+            <Flex direction="column" gap="1">
+              <Text weight="bold" size="7">
+                {messageCount}
+              </Text>
+              <Text size="2" color="gray">
+                Interactions
+              </Text>
             </Flex>
-            
-            {sessionCount === 0 && qaPairCount === 0 ? (
-              <Flex direction="column" gap="3">
-                <Text color="gray">
-                  No data imported yet. Import your ChatGPT export, add QA pairs manually, or use the Chrome extension to add data.
-                </Text>
-              </Flex>
-            ) : (
-              <>
-                <Grid columns="4" gap="4">
-                  <Flex direction="column" gap="1">
-                    <Text weight="bold" size="6">
-                      {sessionCount}
-                    </Text>
-                    <Text size="2" color="gray">
-                      Conversations
-                    </Text>
-                  </Flex>
-                  <Flex direction="column" gap="1">
-                    <Text weight="bold" size="6">
-                      {messageCount}
-                    </Text>
-                    <Text size="2" color="gray">
-                      Messages
-                    </Text>
-                  </Flex>
-                  <Flex direction="column" gap="1">
-                    <Text weight="bold" size="6">
-                      {qaPairCount}
-                    </Text>
-                    <Text size="2" color="gray">
-                      QA Pairs
-                    </Text>
-                  </Flex>
-                  <Flex direction="column" gap="1">
-                    <Text weight="bold" size="6">
-                      {tagCount}
-                    </Text>
-                    <Text size="2" color="gray">
-                      Tags
-                    </Text>
-                  </Flex>
-                </Grid>
+          </Card>
+          <Card variant="surface">
+            <Flex direction="column" gap="1">
+              <Text weight="bold" size="7">
+                {tagCount}
+              </Text>
+              <Text size="2" color="gray">
+                Tags
+              </Text>
+            </Flex>
+          </Card>
+        </Grid>
 
-                {/* All Conversations (Sessions + QA Conversations) */}
-                {(sessions.length > 0 || qaConversations.length > 0) && (
-                  <Flex direction="column" gap="2" mt="3">
-                    <Text size="3" weight="bold">
-                      Recent Conversations
-                    </Text>
-                    
-                    {/* Display regular sessions */}
-                    {sessions.slice(0, 5).map((session) => (
+        {/* Conversations List */}
+        {conversationCount === 0 ? (
+          <Card variant="surface">
+            <Flex direction="column" align="center" gap="3" py="6">
+              <Database size={32} color="var(--gray-9)" />
+              <Text size="3" color="gray" align="center">
+                No conversations yet
+              </Text>
+            </Flex>
+          </Card>
+        ) : (
+          (sessions.length > 0 || qaConversations.length > 0) && (
+            <Flex direction="column" gap="3">
+              <Text size="4" weight="medium">
+                Conversations
+              </Text>
+              
+              <Card variant="surface">
+                <Flex direction="column" gap="0">
+                  {/* Regular sessions */}
+                  {sessions.slice(0, 5).map((session, idx) => (
+                    <Flex key={session.id} direction="column">
+                      {idx > 0 && (
+                        <div style={{ 
+                          height: '1px', 
+                          background: 'var(--gray-6)', 
+                          margin: '0.5rem 0' 
+                        }} />
+                      )}
                       <Card 
-                        key={session.id} 
-                        variant="surface"
-                        style={{ cursor: 'pointer', transition: 'all 0.2s' }}
+                        variant="ghost"
+                        style={{ 
+                          cursor: 'pointer', 
+                          transition: 'all 0.2s',
+                          padding: '0.75rem'
+                        }}
                         onClick={() => setSelectedSession(session)}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.background = 'var(--accent-3)'
+                          e.currentTarget.style.background = 'var(--accent-2)'
                         }}
                         onMouseLeave={(e) => {
                           e.currentTarget.style.background = ''
                         }}
                       >
-                        <Flex align="center" gap="2">
-                          <MessageSquare size={16} />
-                          <Flex direction="column" gap="1" style={{ flex: 1 }}>
-                            <Text weight="bold" size="2">
-                              {session.title}
-                            </Text>
-                            <Text size="1" color="gray">
-                              {session.messageCount} messages · {session.updatedAt.toLocaleDateString()}
-                            </Text>
-                          </Flex>
-                          <FileText size={14} color="gray" />
+                        <Flex direction="column" gap="1">
+                          <Text weight="medium" size="3">
+                            {session.title}
+                          </Text>
+                          <Text size="2" color="gray">
+                            {session.messageCount} interactions · {session.updatedAt.toLocaleDateString()}
+                          </Text>
                         </Flex>
                       </Card>
-                    ))}
-                    
-                    {/* Display QA conversations */}
-                    {qaConversations.slice(0, 5).map((conv) => (
-                      <Card 
-                        key={conv.id} 
-                        variant="surface"
-                        style={{ cursor: 'pointer', transition: 'all 0.2s' }}
-                        onClick={() => setSelectedQAConversation({ id: conv.id, title: conv.title })}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = 'var(--accent-3)'
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = ''
-                        }}
-                      >
-                        <Flex align="center" gap="2">
-                          <MessageSquare size={16} />
-                          <Flex direction="column" gap="1" style={{ flex: 1 }}>
-                            <Text weight="bold" size="2" style={{
+                    </Flex>
+                  ))}
+                  
+                  {/* QA conversations */}
+                  {qaConversations.slice(0, 5).map((conv, idx) => {
+                    const isFirstQA = idx === 0 && sessions.length === 0
+                    return (
+                      <Flex key={conv.id} direction="column">
+                        {!isFirstQA && (
+                          <div style={{ 
+                            height: '1px', 
+                            background: 'var(--gray-6)', 
+                            margin: '0.5rem 0' 
+                          }} />
+                        )}
+                        <Card 
+                          variant="ghost"
+                          style={{ 
+                            cursor: 'pointer', 
+                            transition: 'all 0.2s',
+                            padding: '0.75rem'
+                          }}
+                          onClick={() => setSelectedQAConversation({ id: conv.id, title: conv.title })}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'var(--accent-2)'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = ''
+                          }}
+                        >
+                          <Flex direction="column" gap="1">
+                            <Text weight="medium" size="3" style={{
                               display: '-webkit-box',
-                              WebkitLineClamp: 1,
+                              WebkitLineClamp: 2,
                               WebkitBoxOrient: 'vertical',
                               overflow: 'hidden',
                             }}>
                               {conv.title}
                             </Text>
-                            <Flex align="center" gap="2" wrap="wrap">
-                              <Badge variant="soft" size="1">
-                                {conv.source}
-                              </Badge>
-                              <Text size="1" color="gray">
-                                {conv.qaPairCount} QA pairs · {conv.updatedAt.toLocaleDateString()}
-                              </Text>
-                            </Flex>
+                            <Text size="2" color="gray">
+                              {conv.source === 'manual' ? 'Manual' : conv.source} · {conv.qaPairCount} {conv.qaPairCount === 1 ? 'interaction' : 'interactions'} · {conv.updatedAt.toLocaleDateString()}
+                            </Text>
                           </Flex>
-                          <FileText size={14} color="gray" />
-                        </Flex>
-                      </Card>
-                    ))}
-                  </Flex>
-                )}
-              </>
-            )}
-          </Flex>
-        </Card>
+                        </Card>
+                      </Flex>
+                    )
+                  })}
+                </Flex>
+              </Card>
+            </Flex>
+          )
+        )}
       </Flex>
+
+      {/* Floating Add Button */}
+      <Button
+        onClick={() => setShowManualQA(true)}
+        size="4"
+        style={{
+          position: 'fixed',
+          bottom: '2rem',
+          right: '2rem',
+          borderRadius: '50%',
+          width: '56px',
+          height: '56px',
+          padding: 0,
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+          zIndex: 1000,
+        }}
+      >
+        <Plus size={24} />
+      </Button>
 
       {/* Conversation Modal */}
       {selectedSession && (

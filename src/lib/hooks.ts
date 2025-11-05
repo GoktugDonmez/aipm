@@ -18,11 +18,18 @@ export function useStats() {
   const tags = useLiveQuery(() => db.tags.toArray())
   const qaPairs = useLiveQuery(() => db.qaPairs.toArray())
 
+  // Count conversations: regular sessions + QA conversations (grouped by sessionId)
+  const qaConversations = qaPairs ? new Set(qaPairs.map(qa => qa.sessionId)).size : 0
+  const totalConversations = (sessions?.length || 0) + qaConversations
+
+  // Count messages: regular messages + QA pairs (each QA pair = 1 question + 1 answer = 2 messages)
+  const qaMessages = (qaPairs?.length || 0) * 2
+  const totalMessages = (messages?.length || 0) + qaMessages
+
   return {
-    sessionCount: sessions?.length || 0,
-    messageCount: messages?.length || 0,
+    conversationCount: totalConversations,
+    messageCount: totalMessages,
     tagCount: tags?.length || 0,
-    qaPairCount: qaPairs?.length || 0,
     isLoading: sessions === undefined,
   }
 }

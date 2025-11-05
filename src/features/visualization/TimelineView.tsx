@@ -39,7 +39,7 @@ export default function TimelineView({ entries }: TimelineViewProps) {
 
                   <Flex gap="2" align="center">
                     <Text size="1" color="gray">
-                      {entry.date.toLocaleDateString()} · {String(entry.metadata.messageCount)} messages
+                      {entry.date.toLocaleDateString()} · {String(entry.metadata.messageCount)} interactions
                     </Text>
                   </Flex>
 
