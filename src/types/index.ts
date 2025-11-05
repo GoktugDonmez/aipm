@@ -3,7 +3,7 @@
 export interface ChatSession {
   id: string
   title: string
-  source: 'chatgpt' | 'claude' | 'gemini' | 'other'
+  source: 'chatgpt' | 'claude' | 'gemini' | 'other' | 'import' | 'manual' | 'extension'
   createdAt: Date
   updatedAt: Date
   messageCount: number

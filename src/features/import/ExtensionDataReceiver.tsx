@@ -48,12 +48,15 @@ export default function ExtensionDataReceiver({ onImportComplete }: { onImportCo
 
     setImporting(true)
     try {
+      // Generate a session ID for this extension import
+      const sessionId = `conv-extension-${crypto.randomUUID()}`
+      
       const qaPairsToSave: QAPair[] = extensionData.qaPairs.map((pair) =>
         normalizeQAPair({
           question: pair.question,
           answer: pair.answer,
           source: 'extension',
-          sessionId: '', // Extension doesn't have session context
+          sessionId: sessionId,
           originalMessageIds: {
             questionId: pair.questionId,
             answerId: pair.answerId,

@@ -1,4 +1,4 @@
-import { QAPair, Message } from '@/types'
+import { QAPair, Message, ChatSession } from '@/types'
 import { db } from '@/lib/db'
 
 export interface QAPairInput {
@@ -71,9 +71,44 @@ export async function saveQAPair(qaPair: QAPair): Promise<void> {
 
 /**
  * Save multiple QA pairs to the database
+ * Also creates/updates the corresponding ChatSession record
  */
 export async function saveQAPairs(qaPairs: QAPair[]): Promise<void> {
   await db.qaPairs.bulkPut(qaPairs)
+  
+  // Group pairs by sessionId and create/update ChatSession records
+  const sessionMap = new Map<string, { pairs: QAPair[]; source: 'import' | 'manual' | 'extension' }>()
+  
+  for (const pair of qaPairs) {
+    if (!sessionMap.has(pair.sessionId)) {
+      sessionMap.set(pair.sessionId, { pairs: [], source: pair.source })
+    }
+    sessionMap.get(pair.sessionId)!.pairs.push(pair)
+  }
+  
+  // Create/update sessions
+  for (const [sessionId, data] of sessionMap.entries()) {
+    const pairs = data.pairs
+    const firstPair = pairs[0]
+    const lastPair = pairs[pairs.length - 1]
+    
+    // Use first question as title (or generate a default)
+    const title = firstPair.question.length > 50 
+      ? firstPair.question.substring(0, 50) + '...'
+      : firstPair.question
+    
+    const session: ChatSession = {
+      id: sessionId,
+      title,
+      source: data.source as 'chatgpt' | 'claude' | 'gemini' | 'other' | 'import' | 'manual' | 'extension',
+      createdAt: firstPair.createdAt,
+      updatedAt: lastPair.updatedAt,
+      messageCount: pairs.length * 2, // Each QA pair = 1 question + 1 answer
+      tags: [],
+    }
+    
+    await db.sessions.put(session)
+  }
 }
 
 /**
@@ -106,9 +141,13 @@ export async function deleteQAPair(id: string): Promise<void> {
 
 /**
  * Delete all QA pairs in a conversation (by sessionId)
+ * Also deletes the corresponding ChatSession record
  */
 export async function deleteConversation(sessionId: string): Promise<void> {
-  await db.qaPairs.where('sessionId').equals(sessionId).delete()
+  await db.transaction('rw', db.qaPairs, db.sessions, async () => {
+    await db.qaPairs.where('sessionId').equals(sessionId).delete()
+    await db.sessions.delete(sessionId)
+  })
 }
 
 /**
