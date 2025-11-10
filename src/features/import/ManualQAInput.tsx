@@ -108,7 +108,7 @@ export default function ManualQAInput({
 
   return (
     <Dialog.Root open={open} onOpenChange={handleClose}>
-      <Dialog.Content style={{ maxWidth: '900px', maxHeight: '90vh' }}>
+  <Dialog.Content style={{ maxWidth: '900px', maxHeight: '90vh' }} aria-describedby={undefined}>
         <Flex direction="column" gap="4" style={{ height: '85vh' }}>
           {/* Header */}
           <Flex justify="between" align="start" gap="3">

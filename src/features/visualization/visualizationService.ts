@@ -1,4 +1,4 @@
-// Placeholder for visualization data preparation
+// Visualization data preparation utilities
 
 import { GraphNode, GraphEdge, ChatSession, Tag } from '@/types'
 
@@ -7,115 +7,155 @@ export interface VisualizationData {
   edges: GraphEdge[]
 }
 
+export interface GraphGenerationOptions {
+  selectedTags?: string[]
+  includeSharedTagEdges?: boolean
+  minSharedTags?: number
+}
+
 export async function generateGraphData(
   sessions: ChatSession[],
-  _tags: Tag[]
+  tags: Tag[],
+  options: GraphGenerationOptions = {}
 ): Promise<VisualizationData> {
-  const nodes: GraphNode[] = []
-  const edges: GraphEdge[] = []
-  
-  // Extract keywords from session titles as pseudo-tags
-  const keywordMap = new Map<string, Set<string>>()
-  const sessionKeywords = new Map<string, string[]>()
-  
-  sessions.forEach(session => {
-    // Extract keywords (more lenient: words > 3 chars)
-    const words = session.title
-      .toLowerCase()
-      .replace(/[^\w\s]/g, '') // Remove punctuation
-      .split(/\s+/)
-      .filter(word => 
-        word.length > 3 && 
-        !['about', 'using', 'guide', 'with', 'from', 'this', 'that', 'your', 'best'].includes(word)
-      )
-    
-    // Take more keywords for better connectivity
-    const keywords = words.slice(0, 5)
-    sessionKeywords.set(session.id, keywords)
-    
-    keywords.forEach(keyword => {
-      if (!keywordMap.has(keyword)) {
-        keywordMap.set(keyword, new Set())
+  const {
+    selectedTags = [],
+    includeSharedTagEdges = true,
+    minSharedTags = 2,
+  } = options
+
+  const selectedTagSet = new Set(selectedTags.map(tag => tag.toLowerCase()))
+
+  const activeSessions = sessions.filter(session => {
+    if (selectedTagSet.size === 0) return true
+    return (session.tags || []).some(tag => selectedTagSet.has(tag.toLowerCase()))
+  })
+
+  const sessionNodes: GraphNode[] = activeSessions.map(session => ({
+    id: session.id,
+    label: session.title,
+    type: 'session',
+    size: Math.log(session.messageCount + 1) * 10 + 15,
+    color: sourceColor(session.source),
+  }))
+
+  const tagUsage = new Map<string, { count: number; label: string }>()
+  const untaggedSessions: string[] = []
+
+  activeSessions.forEach(session => {
+    if (!session.tags || session.tags.length === 0) {
+      untaggedSessions.push(session.id)
+      return
+    }
+
+    session.tags.forEach(tagName => {
+      const normalized = tagName.toLowerCase()
+      if (!tagUsage.has(normalized)) {
+        tagUsage.set(normalized, { count: 0, label: tagName })
       }
-      keywordMap.get(keyword)!.add(session.id)
+      tagUsage.get(normalized)!.count += 1
     })
   })
-  
-  // Create session nodes
-  sessions.forEach(session => {
-    nodes.push({
-      id: session.id,
-      label: session.title,
-      type: 'session',
-      size: Math.log(session.messageCount + 1) * 10 + 15,
-      color: session.source === 'chatgpt' ? '#10b981' : '#3b82f6',
-    })
+
+  const tagMap = new Map<string, Tag>()
+  tags.forEach(tag => tagMap.set(tag.name.toLowerCase(), tag))
+
+  const sortedTags = Array.from(tagUsage.entries())
+    .sort((a, b) => b[1].count - a[1].count)
+    .slice(0, 50) // Limit tag node count for readability
+
+  const tagNodes: GraphNode[] = sortedTags.map(([normalized, usage]) => {
+    const tagRecord = tagMap.get(normalized)
+    const label = tagRecord?.name ?? usage.label
+    const baseCount = tagRecord?.sessionCount ?? usage.count
+    const color = tagRecord?.color ?? '#f97316'
+
+    return {
+      id: `tag-${normalized}`,
+      label,
+      type: 'tag',
+      size: baseCount * 10 + 20,
+      color,
+    }
   })
-  
-  // Create keyword nodes and edges (for keywords shared by 2+ sessions)
-  keywordMap.forEach((sessionIds, keyword) => {
-    if (sessionIds.size >= 2) {
-      const nodeId = `keyword-${keyword}`
-      nodes.push({
-        id: nodeId,
-        label: keyword,
-        type: 'concept',
-        size: sessionIds.size * 10 + 20,
-        color: '#f59e0b',
-      })
-      
-      // Connect all sessions that share this keyword to the concept node
-      sessionIds.forEach(sessionId => {
-        edges.push({
-          source: sessionId,
-          target: nodeId,
+
+  if (untaggedSessions.length > 0) {
+    tagNodes.push({
+      id: 'tag-untagged',
+      label: 'Untagged',
+      type: 'tag',
+      size: 20,
+      color: '#6b7280',
+    })
+  }
+
+  const sessionTagEdges: GraphEdge[] = []
+
+  activeSessions.forEach(session => {
+    const sessionTagSet = new Set((session.tags || []).map(tag => tag.toLowerCase()))
+
+    sortedTags.forEach(([normalized]) => {
+      if (sessionTagSet.has(normalized)) {
+        sessionTagEdges.push({
+          source: session.id,
+          target: `tag-${normalized}`,
           weight: 1,
         })
+      }
+    })
+
+    if (sessionTagSet.size === 0) {
+      sessionTagEdges.push({
+        source: session.id,
+        target: 'tag-untagged',
+        weight: 0.5,
       })
     }
   })
-  
-  // Also create direct session-to-session edges for very similar topics
-  for (let i = 0; i < sessions.length; i++) {
-    for (let j = i + 1; j < sessions.length; j++) {
-      const keywords1 = sessionKeywords.get(sessions[i].id) || []
-      const keywords2 = sessionKeywords.get(sessions[j].id) || []
-      
-      // Count common keywords
-      const commonKeywords = keywords1.filter(k => keywords2.includes(k))
-      
-      // If they share 2+ keywords, connect them directly
-      if (commonKeywords.length >= 2) {
-        edges.push({
-          source: sessions[i].id,
-          target: sessions[j].id,
-          weight: commonKeywords.length,
-        })
+
+  const sharedTagEdges: GraphEdge[] = []
+
+  if (includeSharedTagEdges) {
+    for (let i = 0; i < activeSessions.length; i++) {
+      for (let j = i + 1; j < activeSessions.length; j++) {
+        const tagsA = new Set((activeSessions[i].tags || []).map(tag => tag.toLowerCase()))
+        const tagsB = new Set((activeSessions[j].tags || []).map(tag => tag.toLowerCase()))
+
+        const common = Array.from(tagsA).filter(tag => tagsB.has(tag))
+        const sharedCount = common.length
+
+        if (sharedCount >= Math.max(1, minSharedTags)) {
+          sharedTagEdges.push({
+            source: activeSessions[i].id,
+            target: activeSessions[j].id,
+            weight: sharedCount,
+          })
+        }
       }
     }
   }
-  
-  // If we still have isolated nodes, create a central "hub" node
-  if (edges.length === 0 && nodes.length > 1) {
-    const hubId = 'hub-center'
-    nodes.push({
-      id: hubId,
-      label: 'AI Conversations',
-      type: 'concept',
-      size: 30,
-      color: '#8b5cf6',
-    })
-    
-    sessions.forEach(session => {
-      edges.push({
-        source: session.id,
-        target: hubId,
-        weight: 0.5,
-      })
-    })
-  }
-  
+
+  const nodes = [...sessionNodes, ...tagNodes]
+  const edges = [...sessionTagEdges, ...sharedTagEdges]
+
   return { nodes, edges }
+}
+
+function sourceColor(source: ChatSession['source']): string {
+  switch (source) {
+    case 'chatgpt':
+      return '#0ea5e9'
+    case 'claude':
+      return '#a855f7'
+    case 'gemini':
+      return '#22d3ee'
+    case 'manual':
+      return '#10b981'
+    case 'extension':
+      return '#f97316'
+    default:
+      return '#3b82f6'
+  }
 }
 
 export interface TimelineEntry {

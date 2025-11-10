@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Dialog, Flex, Text, ScrollArea, Card, Button, AlertDialog } from '@radix-ui/themes'
-import { MessageSquare, User, Bot, X, Trash2 } from 'lucide-react'
-import { QAPair } from '@/types'
+import { User, Bot, X, Trash2 } from 'lucide-react'
 import { useQAPairsBySession } from '@/lib/hooks'
 import { deleteConversation } from '@/features/qa/qaService'
 
@@ -41,7 +40,7 @@ export default function QAConversationModal({
 
   return (
     <Dialog.Root open={open} onOpenChange={onClose}>
-      <Dialog.Content style={{ maxWidth: '800px', maxHeight: '90vh' }}>
+  <Dialog.Content style={{ maxWidth: '800px', maxHeight: '90vh' }} aria-describedby={undefined}>
         <Flex direction="column" gap="3" style={{ height: '80vh' }}>
           {/* Header */}
           <Flex justify="between" align="start" gap="3">

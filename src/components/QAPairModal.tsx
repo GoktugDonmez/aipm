@@ -1,5 +1,5 @@
 import { Dialog, Flex, Text, Badge, ScrollArea, Card, Button } from '@radix-ui/themes'
-import { HelpCircle, User, Bot, X } from 'lucide-react'
+import { User, Bot, X } from 'lucide-react'
 import { QAPair } from '@/types'
 
 interface QAPairModalProps {
@@ -11,7 +11,7 @@ interface QAPairModalProps {
 export default function QAPairModal({ qaPair, open, onClose }: QAPairModalProps) {
   return (
     <Dialog.Root open={open} onOpenChange={onClose}>
-      <Dialog.Content style={{ maxWidth: '800px', maxHeight: '90vh' }}>
+  <Dialog.Content style={{ maxWidth: '800px', maxHeight: '90vh' }} aria-describedby={undefined}>
         <Flex direction="column" gap="3" style={{ height: '80vh' }}>
           {/* Header */}
           <Flex justify="between" align="start" gap="3">

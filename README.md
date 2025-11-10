@@ -34,6 +34,7 @@ Transform AI conversations and notes into organized, visual, and searchable know
 npm install
 ```
 
+
 ### Development
 
 ```bash
@@ -44,6 +45,8 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 ### Build
 
+Run this to show changes
+
 ```bash
 npm run build
 ```
@@ -53,6 +56,13 @@ npm run build
 ```bash
 npm run preview
 ```
+## AI Agent Workflow and Logging
+
+Each start of a new task or AI-agent chat should include exhaustive context. Attach `docs/PRD.md` and `BACKLOG.md` so the agent understands the product vision and latest status. Use `BACKLOG.md` actively:
+- `Completed` / `Upcoming` summarize current status (reverse chronological order).
+- `Important Notes` explains how to read the backlog at a glance.
+- `Implementation Log` records detailed changes with file references in reverse chronological order.
+
 
 ## Project Structure
 

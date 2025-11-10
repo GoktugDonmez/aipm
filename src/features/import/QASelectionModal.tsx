@@ -101,7 +101,7 @@ export default function QASelectionModal({
 
   return (
     <Dialog.Root open={open} onOpenChange={onClose}>
-      <Dialog.Content style={{ maxWidth: '900px', maxHeight: '90vh' }}>
+  <Dialog.Content style={{ maxWidth: '900px', maxHeight: '90vh' }} aria-describedby={undefined}>
         <Flex direction="column" gap="4" style={{ height: '85vh' }}>
           {/* Header */}
           <Flex justify="between" align="start" gap="3">

@@ -70,12 +70,12 @@ export default function Settings() {
                     <Text>
                       Are you sure you want to delete all data? This will permanently remove:
                     </Text>
-                    <Text as="ul" style={{ marginLeft: '1.5rem' }}>
+                    <ul style={{ paddingLeft: '1.5rem', margin: 0 }}>
                       <li>All conversations</li>
                       <li>All interactions</li>
                       <li>All tags</li>
                       <li>All embeddings</li>
-                    </Text>
+                    </ul>
                     <Text weight="bold" color="red">
                       This action cannot be undone!
                     </Text>

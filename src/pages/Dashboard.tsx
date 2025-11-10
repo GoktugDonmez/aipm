@@ -1,6 +1,6 @@
-import { Text, Card, Flex, Button, Grid } from '@radix-ui/themes'
+import { Text, Card, Flex, Button, Grid, Badge } from '@radix-ui/themes'
 import { Database, Plus } from 'lucide-react'
-// import ImportUpload from '@/features/import/ImportUpload' // Hidden - ChatGPT doesn't provide file exports
+import ImportUpload from '@/features/import/ImportUpload'
 import ManualQAInput from '@/features/import/ManualQAInput'
 import ExtensionDataReceiver from '@/features/import/ExtensionDataReceiver'
 import { useStats, useSessions } from '@/lib/hooks'
@@ -22,6 +22,9 @@ export default function Dashboard() {
   return (
     <div key={refreshKey}>
       <Flex gap="6" direction="column">
+        {/* Import Upload */}
+        <ImportUpload onImportComplete={handleImportComplete} />
+
         {/* Extension Data Receiver */}
         <ExtensionDataReceiver onImportComplete={handleImportComplete} />
 
@@ -116,9 +119,19 @@ export default function Dashboard() {
                               {session.messageCount} interactions · {session.updatedAt.toLocaleDateString()}
                             </Text>
                           </Flex>
-                          <Text size="1" color="gray" style={{ fontStyle: 'italic', marginLeft: '1rem' }}>
-                            Tags (coming soon)
-                          </Text>
+                          <Flex gap="1" wrap="wrap" style={{ marginLeft: '1rem', justifyContent: 'flex-end' }}>
+                            {session.tags && session.tags.length > 0 ? (
+                              session.tags.map((tag) => (
+                                <Badge key={tag} variant="soft" size="1">
+                                  {tag}
+                                </Badge>
+                              ))
+                            ) : (
+                              <Text size="1" color="gray" style={{ fontStyle: 'italic' }}>
+                                No tags yet
+                              </Text>
+                            )}
+                          </Flex>
                         </Flex>
                       </Card>
                     </Flex>

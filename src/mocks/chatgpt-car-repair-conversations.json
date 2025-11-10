@@ -1,0 +1,194 @@
+[
+  {
+    "id": "car-conv-1",
+    "title": "Diagnosing Brake Squeal",
+    "create_time": 1699056000,
+    "update_time": 1699056660,
+    "mapping": {
+      "message-1": {
+        "id": "car-conv-1-user-1",
+        "message": {
+          "id": "car-conv-1-user-1",
+          "author": { "role": "user" },
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "My front brakes squeal every time I slow down, but pads look fine. What should I check first?"
+            ]
+          },
+          "create_time": 1699056000
+        }
+      },
+      "message-2": {
+        "id": "car-conv-1-assistant-1",
+        "message": {
+          "id": "car-conv-1-assistant-1",
+          "author": { "role": "assistant" },
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Inspect for glazing on the pads and rotors, clean hardware, and add high-temp brake grease to the slide pins and contact points." 
+            ]
+          },
+          "create_time": 1699056240
+        }
+      },
+      "message-3": {
+        "id": "car-conv-1-user-2",
+        "message": {
+          "id": "car-conv-1-user-2",
+          "author": { "role": "user" },
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "What if the rotors are glazed?"
+            ]
+          },
+          "create_time": 1699056420
+        }
+      },
+      "message-4": {
+        "id": "car-conv-1-assistant-2",
+        "message": {
+          "id": "car-conv-1-assistant-2",
+          "author": { "role": "assistant" },
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Have them resurfaced or replace them. Afterward do a proper bed-in to transfer an even brake layer." 
+            ]
+          },
+          "create_time": 1699056660
+        }
+      }
+    }
+  },
+  {
+    "id": "car-conv-2",
+    "title": "Check Engine Light P0302 Code",
+    "create_time": 1699142400,
+    "update_time": 1699143120,
+    "mapping": {
+      "message-1": {
+        "id": "car-conv-2-user-1",
+        "message": {
+          "id": "car-conv-2-user-1",
+          "author": { "role": "user" },
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "OBD scanner shows P0302 misfire on cylinder 2. Plugs were changed last year. Where do I start?"
+            ]
+          },
+          "create_time": 1699142400
+        }
+      },
+      "message-2": {
+        "id": "car-conv-2-assistant-1",
+        "message": {
+          "id": "car-conv-2-assistant-1",
+          "author": { "role": "assistant" },
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Swap the ignition coil with another cylinder and see if the misfire follows. Check injector pulse, vacuum leaks, and compression if it stays." 
+            ]
+          },
+          "create_time": 1699142700
+        }
+      },
+      "message-3": {
+        "id": "car-conv-2-user-2",
+        "message": {
+          "id": "car-conv-2-user-2",
+          "author": { "role": "user" },
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Should I drive it meanwhile?"
+            ]
+          },
+          "create_time": 1699142880
+        }
+      },
+      "message-4": {
+        "id": "car-conv-2-assistant-2",
+        "message": {
+          "id": "car-conv-2-assistant-2",
+          "author": { "role": "assistant" },
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Limit driving—an active misfire can damage the catalytic converter. Fix the root cause first." 
+            ]
+          },
+          "create_time": 1699143120
+        }
+      }
+    }
+  },
+  {
+    "id": "car-conv-3",
+    "title": "Replacing a Serpentine Belt",
+    "create_time": 1699228800,
+    "update_time": 1699229460,
+    "mapping": {
+      "message-1": {
+        "id": "car-conv-3-user-1",
+        "message": {
+          "id": "car-conv-3-user-1",
+          "author": { "role": "user" },
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "My serpentine belt is cracked. What tools do I need to replace it on a 2014 Civic?"
+            ]
+          },
+          "create_time": 1699228800
+        }
+      },
+      "message-2": {
+        "id": "car-conv-3-assistant-1",
+        "message": {
+          "id": "car-conv-3-assistant-1",
+          "author": { "role": "assistant" },
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Use a 14mm socket on the tensioner, a long ratchet or breaker bar, and a belt routing diagram. Removing the passenger wheel gives more room." 
+            ]
+          },
+          "create_time": 1699229100
+        }
+      },
+      "message-3": {
+        "id": "car-conv-3-user-2",
+        "message": {
+          "id": "car-conv-3-user-2",
+          "author": { "role": "user" },
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Do I need to disconnect the battery?"
+            ]
+          },
+          "create_time": 1699229280
+        }
+      },
+      "message-4": {
+        "id": "car-conv-3-assistant-2",
+        "message": {
+          "id": "car-conv-3-assistant-2",
+          "author": { "role": "assistant" },
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "It's not required but is a good safety step. Ensure the engine is cold and keep fingers clear when releasing the tensioner." 
+            ]
+          },
+          "create_time": 1699229460
+        }
+      }
+    }
+  }
+]

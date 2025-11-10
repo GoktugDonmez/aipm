@@ -1,32 +1,120 @@
-import { useState, useEffect } from 'react'
-import { Heading, Text, Card, Tabs, Flex } from '@radix-ui/themes'
+import { useState, useEffect, useMemo } from 'react'
+import { Heading, Text, Card, Tabs, Flex, Button, Select, Switch } from '@radix-ui/themes'
 import { useSessions } from '@/lib/hooks'
-import { generateGraphData, generateTimelineData } from '@/features/visualization/visualizationService'
+import { generateGraphData, generateTimelineData, GraphGenerationOptions } from '@/features/visualization/visualizationService'
 import NetworkGraph from '@/features/visualization/NetworkGraph'
 import TimelineView from '@/features/visualization/TimelineView'
 import { GraphNode, GraphEdge } from '@/types'
 import { TimelineEntry } from '@/features/visualization/visualizationService'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { db } from '@/lib/db'
+
+const SOURCE_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: 'chatgpt', label: 'ChatGPT' },
+  { value: 'claude', label: 'Claude' },
+  { value: 'gemini', label: 'Gemini' },
+  { value: 'manual', label: 'Manual' },
+  { value: 'extension', label: 'Extension' },
+  { value: 'other', label: 'Other' },
+  { value: 'import', label: 'Imported' },
+]
+
+type Timeframe = 'all' | '7d' | '30d' | '90d'
 
 export default function Visualize() {
   const { sessions } = useSessions()
+  const tags = useLiveQuery(() => db.tags.toArray())
   const [graphData, setGraphData] = useState<{ nodes: GraphNode[]; edges: GraphEdge[] }>({
     nodes: [],
     edges: [],
   })
   const [timelineData, setTimelineData] = useState<TimelineEntry[]>([])
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [selectedSources, setSelectedSources] = useState<Set<string>>(new Set())
+  const [timeframe, setTimeframe] = useState<Timeframe>('all')
+  const [includeSharedEdges, setIncludeSharedEdges] = useState(true)
+  const [minSharedTags, setMinSharedTags] = useState(2)
+
+  const tagStats = useMemo(() => {
+    const counts = new Map<string, number>()
+    sessions.forEach(session => {
+      (session.tags || []).forEach(tag => {
+        counts.set(tag, (counts.get(tag) || 0) + 1)
+      })
+    })
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 30)
+  }, [sessions])
+
+  const filteredSessions = useMemo(() => {
+    const bySource = sessions.filter(session => {
+      if (selectedSources.size === 0) return true
+      return selectedSources.has(session.source)
+    })
+
+    const byTags = bySource.filter(session => {
+      if (selectedTags.length === 0) return true
+      const sessionTags = session.tags || []
+      return selectedTags.some(tag => sessionTags.includes(tag))
+    })
+
+    if (timeframe === 'all') {
+      return byTags
+    }
+
+    const now = Date.now()
+    const timeframeMap: Record<Exclude<Timeframe, 'all'>, number> = {
+      '7d': 7,
+      '30d': 30,
+      '90d': 90,
+    }
+    const days = timeframeMap[timeframe]
+    const cutoff = now - days * 24 * 60 * 60 * 1000
+
+    return byTags.filter(session => session.updatedAt.getTime() >= cutoff)
+  }, [sessions, selectedSources, selectedTags, timeframe])
+
+  const graphOptions: GraphGenerationOptions = useMemo(() => ({
+    selectedTags,
+    includeSharedTagEdges: includeSharedEdges,
+    minSharedTags,
+  }), [selectedTags, includeSharedEdges, minSharedTags])
+
+  const toggleTag = (tag: string) => {
+    setSelectedTags(prev => (
+      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    ))
+  }
+
+  const toggleSource = (source: string) => {
+    setSelectedSources(prev => {
+      const next = new Set(prev)
+      if (next.has(source)) {
+        next.delete(source)
+      } else {
+        next.add(source)
+      }
+      return next
+    })
+  }
 
   useEffect(() => {
-    if (sessions.length === 0) return
+    if (filteredSessions.length === 0) {
+      setGraphData({ nodes: [], edges: [] })
+      setTimelineData([])
+      return
+    }
 
     const loadData = async () => {
-      const graph = await generateGraphData(sessions, [])
-      const timeline = await generateTimelineData(sessions)
+      const graph = await generateGraphData(filteredSessions, tags || [], graphOptions)
+      const timeline = await generateTimelineData(filteredSessions)
       setGraphData(graph)
       setTimelineData(timeline)
     }
 
     loadData()
-  }, [sessions])
+  }, [filteredSessions, tags, graphOptions])
 
   if (sessions.length === 0) {
     return (
@@ -54,6 +142,116 @@ export default function Visualize() {
       <Text size="3" color="gray" mb="6">
         Explore your knowledge graph and timeline
       </Text>
+
+      <Card mb="4">
+        <Flex direction="column" gap="3">
+          <Text size="3" weight="bold">
+            Filters
+          </Text>
+
+          <Flex direction="column" gap="2">
+            <Text size="2" weight="medium">
+              Tags
+            </Text>
+            <Flex gap="2" wrap="wrap">
+              {tagStats.length === 0 && (
+                <Text size="2" color="gray">No tags available yet.</Text>
+              )}
+              {tagStats.map(([tag, count]) => {
+                const isActive = selectedTags.includes(tag)
+                return (
+                  <Button
+                    key={tag}
+                    variant={isActive ? 'solid' : 'soft'}
+                    size="1"
+                    onClick={() => toggleTag(tag)}
+                  >
+                    {tag} ({count})
+                  </Button>
+                )
+              })}
+              {selectedTags.length > 0 && (
+                <Button variant="ghost" size="1" onClick={() => setSelectedTags([])}>
+                  Clear Tags
+                </Button>
+              )}
+            </Flex>
+          </Flex>
+
+          <Flex direction="column" gap="2">
+            <Text size="2" weight="medium">
+              Sources
+            </Text>
+            <Flex gap="2" wrap="wrap">
+              {SOURCE_OPTIONS.map(option => {
+                const isActive = selectedSources.has(option.value)
+                return (
+                  <Button
+                    key={option.value}
+                    variant={isActive ? 'solid' : 'soft'}
+                    size="1"
+                    onClick={() => toggleSource(option.value)}
+                  >
+                    {option.label}
+                  </Button>
+                )
+              })}
+              {selectedSources.size > 0 && (
+                <Button variant="ghost" size="1" onClick={() => setSelectedSources(new Set())}>
+                  Clear Sources
+                </Button>
+              )}
+            </Flex>
+          </Flex>
+
+          <Flex gap="4" wrap="wrap" align="center">
+            <Flex direction="column" gap="1">
+              <Text size="2" weight="medium">
+                Time Range
+              </Text>
+              <Select.Root value={timeframe} onValueChange={value => setTimeframe(value as Timeframe)}>
+                <Select.Trigger />
+                <Select.Content>
+                  <Select.Item value="all">All Time</Select.Item>
+                  <Select.Item value="7d">Last 7 days</Select.Item>
+                  <Select.Item value="30d">Last 30 days</Select.Item>
+                  <Select.Item value="90d">Last 90 days</Select.Item>
+                </Select.Content>
+              </Select.Root>
+            </Flex>
+
+            <Flex direction="column" gap="1">
+              <Text size="2" weight="medium">
+                Shared Tag Edges
+              </Text>
+              <Flex align="center" gap="2">
+                <Switch checked={includeSharedEdges} onCheckedChange={checked => setIncludeSharedEdges(Boolean(checked))} />
+                <Text size="2" color="gray">
+                  Connect sessions sharing tags
+                </Text>
+              </Flex>
+            </Flex>
+
+            <Flex direction="column" gap="1">
+              <Text size="2" weight="medium">
+                Min Shared Tags
+              </Text>
+              <Select.Root
+                value={String(minSharedTags)}
+                onValueChange={value => setMinSharedTags(Number(value))}
+                disabled={!includeSharedEdges}
+              >
+                <Select.Trigger />
+                <Select.Content>
+                  <Select.Item value="1">1</Select.Item>
+                  <Select.Item value="2">2</Select.Item>
+                  <Select.Item value="3">3</Select.Item>
+                </Select.Content>
+              </Select.Root>
+            </Flex>
+          </Flex>
+        </Flex>
+      </Card>
 
       <Tabs.Root defaultValue="graph">
         <Tabs.List>

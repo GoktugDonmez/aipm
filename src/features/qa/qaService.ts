@@ -1,5 +1,6 @@
 import { QAPair, Message, ChatSession } from '@/types'
 import { db } from '@/lib/db'
+import { autoTagSessions } from '@/features/tags/taggingService'
 
 export interface QAPairInput {
   question: string
@@ -108,6 +109,12 @@ export async function saveQAPairs(qaPairs: QAPair[]): Promise<void> {
     }
     
     await db.sessions.put(session)
+  }
+
+  // Refresh automatic tags for affected sessions
+  const sessionIds = Array.from(sessionMap.keys()).filter((id) => id)
+  if (sessionIds.length > 0) {
+    await autoTagSessions(sessionIds)
   }
 }
 

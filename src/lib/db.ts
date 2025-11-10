@@ -29,7 +29,13 @@ export class MemoriaDB extends Dexie {
    * Clear all data from the database
    */
   async clearAll(): Promise<void> {
-    await this.transaction('rw', this.sessions, this.messages, this.tags, this.embeddings, this.qaPairs, async () => {
+    await this.transaction('rw', [
+      this.sessions,
+      this.messages,
+      this.tags,
+      this.embeddings,
+      this.qaPairs,
+    ], async () => {
       await this.sessions.clear()
       await this.messages.clear()
       await this.tags.clear()

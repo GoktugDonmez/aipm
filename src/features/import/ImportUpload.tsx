@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { Card, Button, Flex, Text, Progress } from '@radix-ui/themes'
-import { Upload } from 'lucide-react'
+import { Upload, Soup, Wrench } from 'lucide-react'
 import { ChatGPTImportAdapter, importFile, parseFileForQAPairs, ExtractedQAPair } from './importService'
 import QASelectionModal from './QASelectionModal'
+import cookingMocks from '@/mocks/chatgpt-cooking-conversations.json'
+import carRepairMocks from '@/mocks/chatgpt-car-repair-conversations.json'
 
 interface ImportUploadProps {
   onImportComplete?: () => void
@@ -14,10 +16,14 @@ export default function ImportUpload({ onImportComplete }: ImportUploadProps) {
   const [error, setError] = useState<string | null>(null)
   const [showQASelection, setShowQASelection] = useState(false)
   const [extractedQAPairs, setExtractedQAPairs] = useState<ExtractedQAPair[]>([])
+  const [pendingMockFilename, setPendingMockFilename] = useState<string | null>(null)
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+
+    // Allow selecting the same file twice in a row
+    e.target.value = ''
 
     setImporting(true)
     setProgress(0)
@@ -50,9 +56,55 @@ export default function ImportUpload({ onImportComplete }: ImportUploadProps) {
     }
   }
 
+  const importFromDataset = async (dataset: unknown, filename: string) => {
+    try {
+      setImporting(true)
+      setProgress(0)
+      setError(null)
+      setPendingMockFilename(filename)
+
+      const adapter = new ChatGPTImportAdapter()
+      const file = new File([JSON.stringify(dataset)], filename, { type: 'application/json' })
+
+      setProgress(20)
+      const qaPairs = await parseFileForQAPairs(file, adapter)
+
+      if (qaPairs.length > 0) {
+        setExtractedQAPairs(qaPairs)
+        setShowQASelection(true)
+        setImporting(false)
+        setProgress(0)
+      } else {
+        await importFile(file, adapter, (p) => setProgress(20 + p * 0.8))
+        onImportComplete?.()
+        setImporting(false)
+        setProgress(0)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Import failed')
+      setImporting(false)
+      setProgress(0)
+    } finally {
+      setPendingMockFilename(null)
+    }
+  }
+
+  const handleLoadCookingMocks = () => {
+    if (importing) return
+    void importFromDataset(cookingMocks, 'mock-cooking.json')
+  }
+
+  const handleLoadCarMocks = () => {
+    if (importing) return
+    void importFromDataset(carRepairMocks, 'mock-car-repair.json')
+  }
+
   const handleQAImportComplete = () => {
     setShowQASelection(false)
     setExtractedQAPairs([])
+    setImporting(false)
+    setProgress(0)
+    setPendingMockFilename(null)
     onImportComplete?.()
   }
 
@@ -104,6 +156,32 @@ export default function ImportUpload({ onImportComplete }: ImportUploadProps) {
           </Button>
         </label>
 
+        <Flex gap="2" wrap="wrap">
+          <Button
+            variant="soft"
+            size="2"
+            onClick={handleLoadCookingMocks}
+            disabled={importing}
+          >
+            <Soup size={16} />
+            Load Cooking Mock Data
+          </Button>
+          <Button
+            variant="soft"
+            size="2"
+            onClick={handleLoadCarMocks}
+            disabled={importing}
+          >
+            <Wrench size={16} />
+            Load Car Repair Mock Data
+          </Button>
+        </Flex>
+
+        {pendingMockFilename && (
+          <Text size="1" color="gray">
+            Loading {pendingMockFilename}...
+          </Text>
+        )}
       </Flex>
 
       {/* QA Selection Modal */}

@@ -1,6 +1,8 @@
+import { useEffect, useRef } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/lib/db'
 import { QAPair } from '@/types'
+import { autoTagSessions } from '@/features/tags/taggingService'
 
 export interface QAConversation {
   id: string
@@ -37,6 +39,30 @@ export function useSessions() {
   const sessions = useLiveQuery(() => 
     db.sessions.orderBy('updatedAt').reverse().toArray()
   )
+  const autoTaggedRef = useRef<Set<string>>(new Set())
+
+  useEffect(() => {
+    if (!sessions || sessions.length === 0) {
+      return
+    }
+
+    const missingTags = sessions.filter((session) => {
+      const hasTags = Array.isArray(session.tags) && session.tags.length > 0
+      const alreadyProcessed = autoTaggedRef.current.has(session.id)
+      return !hasTags && !alreadyProcessed
+    })
+
+    if (missingTags.length === 0) {
+      return
+    }
+
+    missingTags.forEach((session) => autoTaggedRef.current.add(session.id))
+
+    autoTagSessions(missingTags.map((session) => session.id)).catch((error) => {
+      console.error('Auto-tagging failed:', error)
+      missingTags.forEach((session) => autoTaggedRef.current.delete(session.id))
+    })
+  }, [sessions])
   
   return {
     sessions: sessions || [],

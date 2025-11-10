@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Card, Button, Flex, Text, Badge } from '@radix-ui/themes'
-import { Download, Check } from 'lucide-react'
+import { Download } from 'lucide-react'
 import { normalizeQAPair, saveQAPairs } from '@/features/qa/qaService'
 import { QAPair } from '@/types'
 

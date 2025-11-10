@@ -38,7 +38,7 @@ export default function ConversationModal({ session, open, onClose, onDelete }: 
 
   return (
     <Dialog.Root open={open} onOpenChange={onClose}>
-      <Dialog.Content style={{ maxWidth: '800px', maxHeight: '90vh' }}>
+  <Dialog.Content style={{ maxWidth: '800px', maxHeight: '90vh' }} aria-describedby={undefined}>
         <Flex direction="column" gap="3" style={{ height: '80vh' }}>
           {/* Header */}
           <Flex justify="between" align="start" gap="3">
@@ -50,10 +50,18 @@ export default function ConversationModal({ session, open, onClose, onDelete }: 
                 <Badge variant="outline">
                   {session.updatedAt.toLocaleDateString()}
                 </Badge>
-                <Flex gap="1" align="center" style={{ marginLeft: 'auto' }}>
-                  <Text size="1" color="gray" style={{ fontStyle: 'italic' }}>
-                    Tags (coming soon)
-                  </Text>
+                <Flex gap="1" align="center" wrap="wrap" style={{ marginLeft: 'auto' }}>
+                  {session.tags && session.tags.length > 0 ? (
+                    session.tags.map((tag) => (
+                      <Badge key={tag} variant="soft" size="1">
+                        {tag}
+                      </Badge>
+                    ))
+                  ) : (
+                    <Text size="1" color="gray" style={{ fontStyle: 'italic' }}>
+                      No tags yet
+                    </Text>
+                  )}
                 </Flex>
               </Flex>
             </Flex>

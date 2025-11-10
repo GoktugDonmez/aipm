@@ -1,0 +1,194 @@
+[
+  {
+    "id": "cook-conv-1",
+    "title": "Weeknight Vegetarian Pasta Plan",
+    "create_time": 1698796800,
+    "update_time": 1698797700,
+    "mapping": {
+      "message-1": {
+        "id": "cook-conv-1-user-1",
+        "message": {
+          "id": "cook-conv-1-user-1",
+          "author": { "role": "user" },
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "I need a vegetarian pasta recipe I can cook in under 30 minutes. I only have cherry tomatoes, spinach, garlic, basil, and penne."
+            ]
+          },
+          "create_time": 1698796800
+        }
+      },
+      "message-2": {
+        "id": "cook-conv-1-assistant-1",
+        "message": {
+          "id": "cook-conv-1-assistant-1",
+          "author": { "role": "assistant" },
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Try a cherry tomato and spinach penne: sauté garlic in olive oil, blister the tomatoes, toss in spinach until wilted, add cooked penne, finish with basil and parmesan." 
+            ]
+          },
+          "create_time": 1698797040
+        }
+      },
+      "message-3": {
+        "id": "cook-conv-1-user-2",
+        "message": {
+          "id": "cook-conv-1-user-2",
+          "author": { "role": "user" },
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Can I make it creamy without dairy?"
+            ]
+          },
+          "create_time": 1698797160
+        }
+      },
+      "message-4": {
+        "id": "cook-conv-1-assistant-2",
+        "message": {
+          "id": "cook-conv-1-assistant-2",
+          "author": { "role": "assistant" },
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Blend soaked cashews or silken tofu with a ladle of the pasta water for a dairy-free cream sauce, then stir it in off heat." 
+            ]
+          },
+          "create_time": 1698797700
+        }
+      }
+    }
+  },
+  {
+    "id": "cook-conv-2",
+    "title": "Meal Prep Sheet Pan Chicken Fajitas",
+    "create_time": 1698883200,
+    "update_time": 1698883800,
+    "mapping": {
+      "message-1": {
+        "id": "cook-conv-2-user-1",
+        "message": {
+          "id": "cook-conv-2-user-1",
+          "author": { "role": "user" },
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "I want to meal prep chicken fajitas on a sheet pan. How do I keep the vegetables from getting soggy?"
+            ]
+          },
+          "create_time": 1698883200
+        }
+      },
+      "message-2": {
+        "id": "cook-conv-2-assistant-1",
+        "message": {
+          "id": "cook-conv-2-assistant-1",
+          "author": { "role": "assistant" },
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Use a separate pan for the tortillas, slice peppers thicker than the onions, and roast at 425°F. Add onions halfway so they stay crisp." 
+            ]
+          },
+          "create_time": 1698883380
+        }
+      },
+      "message-3": {
+        "id": "cook-conv-2-user-2",
+        "message": {
+          "id": "cook-conv-2-user-2",
+          "author": { "role": "user" },
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "What seasoning blend should I use?"
+            ]
+          },
+          "create_time": 1698883500
+        }
+      },
+      "message-4": {
+        "id": "cook-conv-2-assistant-2",
+        "message": {
+          "id": "cook-conv-2-assistant-2",
+          "author": { "role": "assistant" },
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Mix chili powder, smoked paprika, cumin, garlic powder, oregano, salt, and a pinch of brown sugar. Toss with oil before roasting." 
+            ]
+          },
+          "create_time": 1698883800
+        }
+      }
+    }
+  },
+  {
+    "id": "cook-conv-3",
+    "title": "Sourdough Starter Troubleshooting",
+    "create_time": 1698969600,
+    "update_time": 1698970200,
+    "mapping": {
+      "message-1": {
+        "id": "cook-conv-3-user-1",
+        "message": {
+          "id": "cook-conv-3-user-1",
+          "author": { "role": "user" },
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "My sourdough starter smells like vinegar after five days. Is it ruined?"
+            ]
+          },
+          "create_time": 1698969600
+        }
+      },
+      "message-2": {
+        "id": "cook-conv-3-assistant-1",
+        "message": {
+          "id": "cook-conv-3-assistant-1",
+          "author": { "role": "assistant" },
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "A tangy smell is normal early on. Discard most of it, feed with equal parts flour and water twice daily, and keep it warmer (75°F)." 
+            ]
+          },
+          "create_time": 1698969840
+        }
+      },
+      "message-3": {
+        "id": "cook-conv-3-user-2",
+        "message": {
+          "id": "cook-conv-3-user-2",
+          "author": { "role": "user" },
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "When can I bake with it?"
+            ]
+          },
+          "create_time": 1698970020
+        }
+      },
+      "message-4": {
+        "id": "cook-conv-3-assistant-2",
+        "message": {
+          "id": "cook-conv-3-assistant-2",
+          "author": { "role": "assistant" },
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Wait until it doubles within 4 hours of feeding and floats in water. That usually takes 7–10 days with regular feedings." 
+            ]
+          },
+          "create_time": 1698970200
+        }
+      }
+    }
+  }
+]

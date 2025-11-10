@@ -2,6 +2,7 @@
 
 import { ChatSession, Message, ImportJob } from '@/types'
 import { extractQAPairsFromMessages } from '@/features/qa/qaService'
+import { autoTagSessions } from '@/features/tags/taggingService'
 
 export interface ImportAdapter {
   parse(file: File): Promise<{ sessions: ChatSession[]; messages: Message[] }>
@@ -137,10 +138,15 @@ export async function importFile(
     await db.messages.bulkPut(messages)
   })
   
-  onProgress?.(90)
+  onProgress?.(85)
+
+  if (sessions.length > 0) {
+    await autoTagSessions(sessions.map((session) => session.id))
+  }
+  
+  onProgress?.(95)
   
   // TODO: Generate embeddings in background
-  // TODO: Auto-tag sessions
   
   onProgress?.(100)
   
