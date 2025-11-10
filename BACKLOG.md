@@ -14,6 +14,7 @@
 ## Important Notes
 - Completed and upcoming lists provide a short CURRENT status snapshot, entries appear in reverse chronological order (newest first).
 - The Implementation Log below captures detailed context, file references, and discussion points. IMPORTANT FOR CONTEXT.
+- The Current implementation for auto-tagging is a classical TF/IDF keyword extraction, used now to build a demo chat connection to be able to visualize the graph. it will be changed later on. 
 
 ## Implementation Log
 - **2025-11-10 – Project context & PRD** *(README.md, docs/PRD.md)* – Captured product vision, requirements, and stakeholder context for quick onboarding.
