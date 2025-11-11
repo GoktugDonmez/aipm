@@ -7,7 +7,7 @@ Transform AI conversations and notes into organized, visual, and searchable know
 - **Import & Index**: One-click export from ChatGPT and other chatbots into a local-first database
 - **Search & Retrieval**: Performant hybrid search with source-grounded results
 - **Auto-Tagging**: AI-powered automatic tagging with manual editing capability
-- **Visual Navigation**: Graph and timeline views for exploring your knowledge base
+- **Visual Navigation**: Graph and timeline views with interactive layouts and in-graph conversation previews
 - **Privacy-First**: Local-first architecture with transparent data controls
 
 ## Tech Stack

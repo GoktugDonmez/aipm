@@ -1,13 +1,20 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Heading, Text, Card, Tabs, Flex, Button, Select, Switch } from '@radix-ui/themes'
 import { useSessions } from '@/lib/hooks'
-import { generateGraphData, generateTimelineData, GraphGenerationOptions } from '@/features/visualization/visualizationService'
-import NetworkGraph from '@/features/visualization/NetworkGraph'
+import {
+  generateGraphData,
+  generateTimelineData,
+  GraphGenerationOptions,
+  VisualizationData,
+} from '@/features/visualization/visualizationService'
+import NetworkGraph, { LayoutStrategy } from '@/features/visualization/NetworkGraph'
 import TimelineView from '@/features/visualization/TimelineView'
-import { GraphNode, GraphEdge } from '@/types'
+import { GraphNode } from '@/types'
 import { TimelineEntry } from '@/features/visualization/visualizationService'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/lib/db'
+import ConversationModal from '@/components/ConversationModal'
+import { ChatSession } from '@/types'
 
 const SOURCE_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'chatgpt', label: 'ChatGPT' },
@@ -24,9 +31,13 @@ type Timeframe = 'all' | '7d' | '30d' | '90d'
 export default function Visualize() {
   const { sessions } = useSessions()
   const tags = useLiveQuery(() => db.tags.toArray())
-  const [graphData, setGraphData] = useState<{ nodes: GraphNode[]; edges: GraphEdge[] }>({
+  const [graphData, setGraphData] = useState<VisualizationData>({
     nodes: [],
     edges: [],
+    meta: {
+      totalSessions: 0,
+      hiddenSessions: 0,
+    },
   })
   const [timelineData, setTimelineData] = useState<TimelineEntry[]>([])
   const [selectedTags, setSelectedTags] = useState<string[]>([])
@@ -34,6 +45,8 @@ export default function Visualize() {
   const [timeframe, setTimeframe] = useState<Timeframe>('all')
   const [includeSharedEdges, setIncludeSharedEdges] = useState(true)
   const [minSharedTags, setMinSharedTags] = useState(2)
+  const [layoutStrategy, setLayoutStrategy] = useState<LayoutStrategy>('balanced')
+  const [selectedSession, setSelectedSession] = useState<ChatSession | null>(null)
 
   const tagStats = useMemo(() => {
     const counts = new Map<string, number>()
@@ -75,11 +88,16 @@ export default function Visualize() {
     return byTags.filter(session => session.updatedAt.getTime() >= cutoff)
   }, [sessions, selectedSources, selectedTags, timeframe])
 
-  const graphOptions: GraphGenerationOptions = useMemo(() => ({
-    selectedTags,
-    includeSharedTagEdges: includeSharedEdges,
-    minSharedTags,
-  }), [selectedTags, includeSharedEdges, minSharedTags])
+  const graphOptions: GraphGenerationOptions = useMemo(
+    () => ({
+      selectedTags,
+      includeSharedTagEdges: includeSharedEdges,
+      minSharedTags,
+    }),
+    [selectedTags, includeSharedEdges, minSharedTags],
+  )
+
+  const sessionMap = useMemo(() => new Map(sessions.map(session => [session.id, session])), [sessions])
 
   const toggleTag = (tag: string) => {
     setSelectedTags(prev => (
@@ -101,7 +119,11 @@ export default function Visualize() {
 
   useEffect(() => {
     if (filteredSessions.length === 0) {
-      setGraphData({ nodes: [], edges: [] })
+      setGraphData({
+        nodes: [],
+        edges: [],
+        meta: { totalSessions: 0, hiddenSessions: 0 },
+      })
       setTimelineData([])
       return
     }
@@ -115,6 +137,14 @@ export default function Visualize() {
 
     loadData()
   }, [filteredSessions, tags, graphOptions])
+
+  const handleNodeClick = (node: GraphNode) => {
+    if (node.type !== 'session') return
+    const session = sessionMap.get(node.id)
+    if (session) {
+      setSelectedSession(session)
+    }
+  }
 
   if (sessions.length === 0) {
     return (
@@ -249,6 +279,20 @@ export default function Visualize() {
                 </Select.Content>
               </Select.Root>
             </Flex>
+
+            <Flex direction="column" gap="1">
+              <Text size="2" weight="medium">
+                Layout Strategy
+              </Text>
+              <Select.Root value={layoutStrategy} onValueChange={value => setLayoutStrategy(value as LayoutStrategy)}>
+                <Select.Trigger />
+                <Select.Content>
+                  <Select.Item value="balanced">Balanced Force</Select.Item>
+                  <Select.Item value="tagOrbit">Tag Orbit</Select.Item>
+                  <Select.Item value="splitByType">Split by Type</Select.Item>
+                </Select.Content>
+              </Select.Root>
+            </Flex>
           </Flex>
         </Flex>
       </Card>
@@ -270,16 +314,24 @@ export default function Visualize() {
                   {graphData.nodes.length} nodes · {graphData.edges.length} connections
                 </Text>
               </Flex>
-              
+
               <Text size="2" color="gray">
                 Drag nodes to explore connections. Scroll to zoom. Green circles are conversations, orange are shared concepts.
               </Text>
+
+              {graphData.meta.hiddenSessions > 0 && (
+                <Text size="2" color="gray">
+                  Showing the most relevant {graphData.meta.totalSessions - graphData.meta.hiddenSessions} of {graphData.meta.totalSessions} sessions for the selected filters.
+                </Text>
+              )}
 
               <NetworkGraph
                 nodes={graphData.nodes}
                 edges={graphData.edges}
                 width={Math.min(window.innerWidth - 300, 1200)}
                 height={600}
+                layout={layoutStrategy}
+                onNodeClick={handleNodeClick}
               />
             </Flex>
           </Card>
@@ -299,6 +351,15 @@ export default function Visualize() {
           </Card>
         </Tabs.Content>
       </Tabs.Root>
+
+      {selectedSession && (
+        <ConversationModal
+          session={selectedSession}
+          open={!!selectedSession}
+          onClose={() => setSelectedSession(null)}
+        />
+      )}
     </div>
   )
 }
+

@@ -5,28 +5,68 @@ import { GraphNode, GraphEdge, ChatSession, Tag } from '@/types'
 export interface VisualizationData {
   nodes: GraphNode[]
   edges: GraphEdge[]
+  meta: {
+    totalSessions: number
+    hiddenSessions: number
+  }
 }
 
 export interface GraphGenerationOptions {
   selectedTags?: string[]
   includeSharedTagEdges?: boolean
   minSharedTags?: number
+  maxSessions?: number
 }
 
 export async function generateGraphData(
   sessions: ChatSession[],
   tags: Tag[],
-  options: GraphGenerationOptions = {}
+  options: GraphGenerationOptions = {},
 ): Promise<VisualizationData> {
   const {
     selectedTags = [],
     includeSharedTagEdges = true,
     minSharedTags = 2,
+    maxSessions = 60,
   } = options
 
   const selectedTagSet = new Set(selectedTags.map(tag => tag.toLowerCase()))
 
-  const activeSessions = sessions.filter(session => {
+  const uniqueSessions = Array.from(
+    sessions.reduce((acc, session) => {
+      const existing = acc.get(session.id)
+      if (!existing || existing.updatedAt.getTime() < session.updatedAt.getTime()) {
+        acc.set(session.id, session)
+      }
+      return acc
+    }, new Map<string, ChatSession>()).values(),
+  )
+
+  const scoredSessions = uniqueSessions.map(session => {
+    const normalizedTags = (session.tags || []).map(tag => tag.toLowerCase())
+    const matchingTagCount = normalizedTags.filter(tag => selectedTagSet.has(tag)).length
+    const score = matchingTagCount > 0 ? matchingTagCount * 12 + session.messageCount : session.messageCount
+
+    return {
+      session,
+      matchingTagCount,
+      score,
+    }
+  })
+
+  const prioritizedSessions = selectedTagSet.size > 0
+    ? scoredSessions
+        .filter(entry => entry.matchingTagCount > 0)
+        .sort((a, b) => b.score - a.score)
+        .map(entry => entry.session)
+    : scoredSessions
+        .sort((a, b) => b.session.updatedAt.getTime() - a.session.updatedAt.getTime())
+        .map(entry => entry.session)
+
+  const limitedSessions = prioritizedSessions.slice(0, maxSessions)
+  const hiddenSessions = Math.max(0, prioritizedSessions.length - limitedSessions.length)
+
+  const activeSessions = limitedSessions.filter(session => {
     if (selectedTagSet.size === 0) return true
     return (session.tags || []).some(tag => selectedTagSet.has(tag.toLowerCase()))
   })
@@ -35,7 +75,7 @@ export async function generateGraphData(
     id: session.id,
     label: session.title,
     type: 'session',
-    size: Math.log(session.messageCount + 1) * 10 + 15,
+    size: Math.max(16, Math.log(session.messageCount + 1) * 10 + 14),
     color: sourceColor(session.source),
   }))
 
@@ -138,7 +178,14 @@ export async function generateGraphData(
   const nodes = [...sessionNodes, ...tagNodes]
   const edges = [...sessionTagEdges, ...sharedTagEdges]
 
-  return { nodes, edges }
+  return {
+    nodes,
+    edges,
+    meta: {
+      totalSessions: prioritizedSessions.length,
+      hiddenSessions,
+    },
+  }
 }
 
 function sourceColor(source: ChatSession['source']): string {
@@ -167,7 +214,7 @@ export interface TimelineEntry {
 }
 
 export async function generateTimelineData(
-  sessions: ChatSession[]
+  sessions: ChatSession[],
 ): Promise<TimelineEntry[]> {
   const entries: TimelineEntry[] = sessions.map(session => ({
     id: session.id,
@@ -180,6 +227,6 @@ export async function generateTimelineData(
       tags: session.tags,
     },
   }))
-  
+
   return entries.sort((a, b) => b.date.getTime() - a.date.getTime())
 }
