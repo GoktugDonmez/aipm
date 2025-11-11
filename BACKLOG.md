@@ -1,6 +1,7 @@
 # Backlog
 
 ## Completed
+- Refined knowledge graph visualization with layout presets, session deduplication, and in-graph conversation modals (Nov 10, 2025).
 - Added mock data loaders (cooking, car repair) and exposed JSON import flow on dashboard (Nov 10, 2025).
 - Switched visualization graph to tag-driven nodes with source/date filters and shared-tag controls (Nov 10, 2025).
 - Added automatic catch-up tagging for legacy sessions via `useSessions` hook (Nov 10, 2025).
@@ -20,5 +21,6 @@
 - **2025-11-10 – Project context & PRD** *(README.md, docs/PRD.md)* – Captured product vision, requirements, and stakeholder context for quick onboarding.
 - **2025-11-10 – Mock data + import UX** *(src/pages/Dashboard.tsx, src/features/import/ImportUpload.tsx, src/mocks/*.json)* – Introduced `ImportUpload` panel to dashboard with file upload support plus instant cooking/car-repair datasets, reusing QA selection workflow for curated imports.
 - **2025-11-10 – Visualization modification** *(src/features/visualization/visualizationService.ts, src/pages/Visualize.tsx)* – Replaced title-keyword graph with tag-based nodes, added configurable shared-tag edges, and built filters for tags, sources, timeframes, and edge density; refreshed graph sizing/color logic for readability.
+- **2025-11-10 – Visualization interactivity refresh** *(src/features/visualization/NetworkGraph.tsx, src/features/visualization/visualizationService.ts, src/pages/Visualize.tsx)* – Introduced selectable layout strategies, conversation node click-through to detailed modal, deduped sessions prior to graph generation, and prioritized filtered relevance to avoid duplicate chats in the network.
 - **2025-11-10 – Legacy session backfill** *(src/lib/hooks.ts)* – Extended `useSessions` to enqueue auto-tag runs for sessions lacking tags, ensuring existing IndexedDB data gets annotated without manual intervention.
 - **2025-11-10 – Auto-tagging pipeline** *(src/features/tags/taggingService.ts, src/features/import/importService.ts, src/features/qa/qaService.ts)* – Replaced placeholder service with TF/IDF keyword extraction, merged results into session/tag tables, and wired into both import flow and QA save path; dashboard and modal UIs now surface tags.
