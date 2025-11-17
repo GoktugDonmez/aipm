@@ -1,14 +1,114 @@
 import { ChatSession, Tag } from '@/types'
 import { db } from '@/lib/db'
+import { createChatCompletion, getDefaultModel, isLLMAvailable } from '@/lib/llm'
+import { CanonicalTagGroup, TagCandidate, TagGenerationResult } from './taggingContracts'
 
 export interface TaggingAdapter {
-  generateTags(session: ChatSession, documents: string[]): Promise<string[]>
+  generateTags(session: ChatSession, documents: string[]): Promise<TagGenerationResult>
 }
 
 export class AITaggingAdapter implements TaggingAdapter {
-  async generateTags(_session: ChatSession, _documents: string[]): Promise<string[]> {
-    // Placeholder for future LLM-powered tagging implementation.
-    return []
+  private readonly fallback = new KeywordTaggingAdapter()
+
+  async generateTags(session: ChatSession, documents: string[]): Promise<TagGenerationResult> {
+    if (!isLLMAvailable()) {
+      return this.fallback.generateTags(session, documents)
+    }
+
+    const excerpt = buildConversationExcerpt(session, documents)
+    if (!excerpt) {
+      return this.fallback.generateTags(session, documents)
+    }
+
+    try {
+      const schema = {
+        type: 'json_schema',
+        json_schema: {
+          name: 'conversation_tags',
+          schema: {
+            type: 'object',
+            properties: {
+              summary: {
+                type: 'string',
+                description: 'One-sentence summary of the conversation',
+              },
+              tags: {
+                type: 'array',
+                minItems: 2,
+                maxItems: 6,
+                items: {
+                  type: 'object',
+                  properties: {
+                    name: { type: 'string' },
+                    rationale: { type: 'string' },
+                    confidence: { type: 'number', minimum: 0, maximum: 1 },
+                  },
+                  required: ['name'],
+                },
+              },
+            },
+            required: ['tags'],
+          },
+        },
+      }
+
+      const messages = [
+        {
+          role: 'system' as const,
+          content:
+            'You are an AI librarian who summarizes conversations and emits concise topical tags. Tags must be 1-3 words each.',
+        },
+        {
+          role: 'user' as const,
+          content: [
+            `Conversation title: ${session.title}`,
+            `Source: ${session.source}`,
+            `Message count in excerpt: ${documents.length}`,
+            'Conversation excerpt:\n"""',
+            excerpt,
+            '"""',
+            'Output JSON with a summary string and an array of tags. Each tag needs name, short rationale, confidence 0-1.',
+          ].join('\n'),
+        },
+      ]
+
+      const completion = await createChatCompletion(messages, {
+        responseFormat: schema,
+        maxTokens: 600,
+        model: getDefaultModel(),
+        temperature: 0.2,
+      })
+
+      const payload = parseJSON(completion?.choices?.[0]?.message?.content) || {}
+      const tags = Array.isArray(payload.tags) ? (payload.tags as any[]) : []
+      const rawTags: TagCandidate[] = tags
+        .map((tag: any) => {
+          const name = formatTagLabel(tag?.name || tag?.label || '')
+          if (!name) return undefined
+          return {
+            name,
+            rationale: tag?.rationale || tag?.reason || undefined,
+            confidence: typeof tag?.confidence === 'number' ? tag.confidence : 0.7,
+          } as TagCandidate
+        })
+        .filter((tag: TagCandidate | undefined): tag is TagCandidate => Boolean(tag?.name))
+
+      const normalizedTags = dedupeNormalizedTags(rawTags.map((tag) => tag.name))
+
+      if (normalizedTags.length === 0) {
+        return this.fallback.generateTags(session, documents)
+      }
+
+      return {
+        sessionId: session.id,
+        rawTags,
+        normalizedTags,
+        summary: typeof payload.summary === 'string' ? payload.summary : undefined,
+      }
+    } catch (error) {
+      console.error('LLM tagging failed, falling back to keyword tagging:', error)
+      return this.fallback.generateTags(session, documents)
+    }
   }
 }
 
@@ -39,21 +139,76 @@ function tokenize(text: string): string[] {
 }
 
 function formatTagLabel(token: string): string {
-  if (token.length <= 3) {
-    return token.toUpperCase()
+  const cleaned = token.trim()
+  if (cleaned.length === 0) return ''
+  if (cleaned.length <= 3) {
+    return cleaned.toUpperCase()
   }
-  return token.charAt(0).toUpperCase() + token.slice(1)
+  return cleaned
+    .split(/\s+/)
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(' ')
+}
+
+function normalizeTagKey(tag: string): string {
+  return tag.trim().toLowerCase().replace(/[^a-z0-9]+/g, ' ')
+}
+
+function dedupeNormalizedTags(tags: string[]): string[] {
+  const seen = new Set<string>()
+  const output: string[] = []
+
+  tags.forEach((tag) => {
+    const key = normalizeTagKey(tag)
+    if (!key || seen.has(key)) {
+      return
+    }
+    seen.add(key)
+    output.push(formatTagLabel(tag))
+  })
+
+  return output.slice(0, 6)
+}
+
+function parseJSON(content?: string | null): any {
+  if (!content) return undefined
+  try {
+    return JSON.parse(content)
+  } catch (error) {
+    console.warn('Failed to parse JSON content from LLM:', error)
+    return undefined
+  }
+}
+
+function buildConversationExcerpt(session: ChatSession, documents: string[]): string {
+  const combined = [session.title, ...documents]
+    .filter(Boolean)
+    .join('\n\n')
+    .trim()
+
+  if (combined.length === 0) {
+    return ''
+  }
+
+  const MAX_EXCERPT_CHARS = 4000
+  return combined.length > MAX_EXCERPT_CHARS
+    ? combined.slice(0, MAX_EXCERPT_CHARS)
+    : combined
 }
 
 export class KeywordTaggingAdapter implements TaggingAdapter {
-  async generateTags(session: ChatSession, documents: string[]): Promise<string[]> {
+  async generateTags(session: ChatSession, documents: string[]): Promise<TagGenerationResult> {
     const corpus = [session.title, ...documents].filter(Boolean)
     const tokenized = corpus
       .map(tokenize)
       .filter((tokens) => tokens.length > 0)
 
     if (tokenized.length === 0) {
-      return []
+      return {
+        sessionId: session.id,
+        rawTags: [],
+        normalizedTags: [],
+      }
     }
 
     const termFrequency = new Map<string, number>()
@@ -91,12 +246,24 @@ export class KeywordTaggingAdapter implements TaggingAdapter {
       if (!uniqueTokens.includes(item.token)) {
         uniqueTokens.push(item.token)
       }
-      if (uniqueTokens.length >= 3) {
+      if (uniqueTokens.length >= 5) {
         break
       }
     }
 
-    return uniqueTokens.map(formatTagLabel)
+    const rawTags: TagCandidate[] = uniqueTokens.map((token) => ({
+      name: formatTagLabel(token),
+      confidence: 0.4,
+      rationale: 'Keyword importance',
+    }))
+
+    const normalizedTags = rawTags.map((tag) => tag.name)
+
+    return {
+      sessionId: session.id,
+      rawTags,
+      normalizedTags,
+    }
   }
 }
 
@@ -121,7 +288,7 @@ export async function mergeTags(existingTags: Tag[], newTagNames: string[]): Pro
 }
 
 export async function autoTagSessions(sessionIds?: string[]): Promise<void> {
-  const adapter = new KeywordTaggingAdapter()
+  const adapter = new AITaggingAdapter()
   const sessions = sessionIds && sessionIds.length > 0
     ? (await db.sessions.bulkGet(sessionIds)).filter((session): session is ChatSession => Boolean(session))
     : await db.sessions.toArray()
@@ -130,7 +297,7 @@ export async function autoTagSessions(sessionIds?: string[]): Promise<void> {
     return
   }
 
-  const nextSessionTags: Array<{ sessionId: string; tags: string[] }> = []
+  const nextSessionTags: TagGenerationResult[] = []
 
   for (const session of sessions) {
     const messages = await db.messages.where('sessionId').equals(session.id).toArray()
@@ -146,28 +313,51 @@ export async function autoTagSessions(sessionIds?: string[]): Promise<void> {
       })
     }
 
-    const generatedTags = await adapter.generateTags(session, documents)
-    nextSessionTags.push({
-      sessionId: session.id,
-      tags: generatedTags,
-    })
+    const generated = await adapter.generateTags(session, documents)
+    nextSessionTags.push(generated)
   }
 
-  await db.transaction('rw', db.sessions, db.tags, async () => {
+  if (nextSessionTags.length === 0) {
+    return
+  }
+
+  await db.transaction('rw', db.sessions, async () => {
     for (const entry of nextSessionTags) {
-      await db.sessions.update(entry.sessionId, { tags: entry.tags })
+      await db.sessions.update(entry.sessionId, { tags: entry.normalizedTags })
+    }
+  })
+
+  const allSessions = await db.sessions.toArray()
+  const allTagNames = allSessions.flatMap((session) => session.tags || [])
+  const refiner = new TagPoolRefiner()
+  const canonicalMap = await refiner.buildCanonicalMap(allTagNames)
+
+  const canonicalUpdates: Array<{ sessionId: string; tags: string[] }> = []
+
+  allSessions.forEach((session) => {
+    const originalTags = session.tags || []
+    const normalized = originalTags.map((tag) => canonicalMap.get(normalizeTagKey(tag)) || formatTagLabel(tag))
+
+    if (!arraysEqual(originalTags, normalized)) {
+      canonicalUpdates.push({ sessionId: session.id, tags: normalized })
+      session.tags = normalized
+    }
+  })
+
+  await db.transaction('rw', db.sessions, db.tags, async () => {
+    for (const update of canonicalUpdates) {
+      await db.sessions.update(update.sessionId, { tags: update.tags })
     }
 
-    const allSessions = await db.sessions.toArray()
     const tagAccumulator = new Map<string, { name: string; sessionIds: Set<string> }>()
 
     allSessions.forEach((session) => {
       session.tags?.forEach((tagName) => {
-        const normalized = tagName.toLowerCase()
-        if (!tagAccumulator.has(normalized)) {
-          tagAccumulator.set(normalized, { name: tagName, sessionIds: new Set<string>() })
+        const normalizedKey = normalizeTagKey(tagName)
+        if (!tagAccumulator.has(normalizedKey)) {
+          tagAccumulator.set(normalizedKey, { name: formatTagLabel(tagName), sessionIds: new Set<string>() })
         }
-        tagAccumulator.get(normalized)!.sessionIds.add(session.id)
+        tagAccumulator.get(normalizedKey)!.sessionIds.add(session.id)
       })
     })
 
@@ -184,4 +374,149 @@ export async function autoTagSessions(sessionIds?: string[]): Promise<void> {
       await db.tags.bulkPut(tagRecords)
     }
   })
+}
+
+class TagPoolRefiner {
+  async buildCanonicalMap(tagNames: string[]): Promise<Map<string, string>> {
+    const unique = Array.from(new Set(tagNames.map((tag) => formatTagLabel(tag)).filter(Boolean)))
+
+    if (unique.length === 0) {
+      return new Map()
+    }
+
+    if (!isLLMAvailable()) {
+      return this.buildFallbackMap(unique)
+    }
+
+    try {
+      const groups = await this.clusterWithLLM(unique)
+      if (!groups || groups.length === 0) {
+        return this.buildFallbackMap(unique)
+      }
+      return this.aliasesToCanonicalMap(unique, groups)
+    } catch (error) {
+      console.warn('LLM tag pooling failed, using fallback heuristics:', error)
+      return this.buildFallbackMap(unique)
+    }
+  }
+
+  private buildFallbackMap(tags: string[]): Map<string, string> {
+    const map = new Map<string, string>()
+    tags.forEach((tag) => {
+      map.set(normalizeTagKey(tag), formatTagLabel(tag))
+    })
+    return map
+  }
+
+  private aliasesToCanonicalMap(tags: string[], groups: CanonicalTagGroup[]): Map<string, string> {
+    const map = new Map<string, string>()
+
+    groups.forEach((group) => {
+      const canonical = formatTagLabel(group.canonical || group.aliases?.[0] || 'General')
+      const aliasSet = new Set<string>([canonical, ...(group.aliases || [])])
+      aliasSet.forEach((alias) => {
+        const key = normalizeTagKey(alias)
+        if (key) {
+          map.set(key, canonical)
+        }
+      })
+    })
+
+    tags.forEach((tag) => {
+      const key = normalizeTagKey(tag)
+      if (!map.has(key)) {
+        map.set(key, formatTagLabel(tag))
+      }
+    })
+
+    return map
+  }
+
+  private async clusterWithLLM(tagNames: string[]): Promise<CanonicalTagGroup[]> {
+    const chunks = chunk(tagNames, 40)
+    const groups: CanonicalTagGroup[] = []
+
+    for (const chunkTags of chunks) {
+      const schema = {
+        type: 'json_schema',
+        json_schema: {
+          name: 'tag_pool_clusters',
+          schema: {
+            type: 'object',
+            properties: {
+              groups: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    canonical: { type: 'string' },
+                    aliases: {
+                      type: 'array',
+                      items: { type: 'string' },
+                    },
+                  },
+                  required: ['canonical', 'aliases'],
+                },
+              },
+            },
+            required: ['groups'],
+          },
+        },
+      }
+
+      const messages = [
+        {
+          role: 'system' as const,
+          content:
+            'You are consolidating semantic tags. Group similar tags together and produce canonical labels (1-2 words).',
+        },
+        {
+          role: 'user' as const,
+          content: [
+            'Group the following tags so that synonyms share a canonical label. Include each tag exactly once.',
+            chunkTags.map((tag) => `- ${tag}`).join('\n'),
+            'Respond with JSON listing groups and their aliases.',
+          ].join('\n'),
+        },
+      ]
+
+      const completion = await createChatCompletion(messages, {
+        responseFormat: schema,
+        maxTokens: 800,
+        model: getDefaultModel(),
+        temperature: 0,
+      })
+
+      const payload = parseJSON(completion?.choices?.[0]?.message?.content)
+      if (Array.isArray(payload?.groups)) {
+        payload.groups.forEach((group: any) => {
+          const canonical = formatTagLabel(group?.canonical || '')
+          const aliases = Array.isArray(group?.aliases)
+            ? group.aliases.map((alias: string) => formatTagLabel(alias)).filter(Boolean)
+            : []
+
+          if (canonical && aliases.length > 0) {
+            groups.push({ canonical, aliases })
+          }
+        })
+      }
+    }
+
+    return groups
+  }
+}
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const result: T[][] = []
+  for (let i = 0; i < items.length; i += size) {
+    result.push(items.slice(i, i + size))
+  }
+  return result
+}
+
+function arraysEqual(a: string[] = [], b: string[] = []): boolean {
+  if (a.length !== b.length) {
+    return false
+  }
+  return a.every((value, index) => normalizeTagKey(value) === normalizeTagKey(b[index]))
 }
