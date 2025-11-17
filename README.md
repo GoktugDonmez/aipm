@@ -51,6 +51,38 @@ Run this to show changes
 npm run build
 ```
 
+### Configure GPT Tagging
+
+Memoria now uses GPT-4o-mini to summarize each conversation and emit canonical tags. To enable it:
+
+1. Create a `.env` file in the project root (same folder as `package.json`).
+2. Add your OpenAI API key plus optional overrides:
+
+```
+VITE_OPENAI_API_KEY=sk-your-key
+# Optional overrides
+VITE_OPENAI_BASE_URL=https://api.openai.com/v1
+VITE_OPENAI_MODEL=gpt-4o-mini
+```
+
+The key is stored locally and used directly in the browser. If no key is set, the app falls back to the keyword-based TF-IDF adapter so auto-tagging still works, albeit with less semantically rich results.
+
+### Tagging Smoke Test (Node Script)
+
+You can test your API key without running the full UI by using the CLI harness:
+
+```bash
+npm run test:tagging -- --text "Discuss protein intake and weekly workouts"
+```
+
+Flags:
+
+- `--text "..."` supply a conversation snippet inline.
+- `--file path/to/chat.txt` load a longer transcript.
+- `--title "Custom session title"` or `--source chatgpt` to mimic different sources.
+
+The script prints whether the GPT pathway is active and streams both normalized tags and the raw tag objects returned by the adapter. If no API key is configured it automatically falls back to the keyword adapter so you can still verify the pipeline wiring.
+
 ### Preview Production Build
 
 ```bash
@@ -84,7 +116,7 @@ src/
 
 ## Roadmap
 
-- [x] Project scaffolding
+- [ ] Project scaffolding
 - [ ] Local database schema (Dexie)
 - [ ] Chat import flow (ChatGPT JSON)
 - [ ] Basic keyword search
