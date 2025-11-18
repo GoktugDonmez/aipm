@@ -62,6 +62,19 @@ export default function QASelectionModal({
 
     setImporting(true)
     try {
+      // Get unique session IDs from selected QA pairs
+      const sessionIds = new Set(Array.from(selectedIndices).map(i => qaPairs[i].sessionId))
+      
+      // Import full conversation messages for these sessions
+      const { db } = await import('@/lib/db')
+      const sessionMessages = await db.messages.where('sessionId').anyOf(Array.from(sessionIds)).toArray()
+      
+      // If messages don't exist yet (first import), we need to save them
+      if (sessionMessages.length === 0) {
+        console.warn('⚠️ No messages found for selected sessions. Full conversation data may be missing.')
+      }
+      
+      // Save selected QA pairs
       const qaPairsToSave: QAPair[] = Array.from(selectedIndices).map((index) => {
         const pair = qaPairs[index]
         return normalizeQAPair({

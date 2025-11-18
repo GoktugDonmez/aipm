@@ -1,7 +1,7 @@
 import { ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Container, Flex, Box } from '@radix-ui/themes'
-import { Home, Search, GitBranch, Settings } from 'lucide-react'
+import { Home, Search, GitBranch, Sparkles, Settings } from 'lucide-react'
 import './Layout.css'
 
 interface LayoutProps {
@@ -15,6 +15,7 @@ export default function Layout({ children }: LayoutProps) {
     { path: '/', icon: Home, label: 'Corpus' },
     { path: '/search', icon: Search, label: 'Search' },
     { path: '/visualize', icon: GitBranch, label: 'Visualize' },
+    { path: '/roadmap', icon: Sparkles, label: 'Roadmap' },
     { path: '/settings', icon: Settings, label: 'Settings' },
   ]
 

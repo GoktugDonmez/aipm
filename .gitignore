@@ -26,3 +26,11 @@ dist-ssr
 
 # Environment variables
 .env
+
+# experiments
+experiments
+
+# Backend server
+server/node_modules
+server/dist
+server/.env
