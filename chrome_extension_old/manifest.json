@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Memoria - ChatGPT Saver",
-  "version": "1.0.0",
-  "description": "Save ChatGPT interactions to Memoria with one click",
+  "name": "ChatGPT Saver",
+  "version": "1.0",
+  "description": "Save ChatGPT responses with one click",
   "permissions": [
     "activeTab",
     "storage"
@@ -20,19 +20,11 @@
       "js": ["content.js"],
       "css": ["content.css"],
       "run_at": "document_end"
-    },
-    {
-      "matches": [
-        "http://localhost:*/*",
-        "http://127.0.0.1:*/*"
-      ],
-      "js": ["memoria-bridge.js"],
-      "run_at": "document_start"
     }
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Memoria - Open App"
+    "default_title": "ChatGPT Saver"
   },
   "icons": {
     "16": "icons/icon16.png",

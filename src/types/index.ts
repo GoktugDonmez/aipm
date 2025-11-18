@@ -91,4 +91,7 @@ export interface QAPair {
     questionId: string
     answerId: string
   }
+  
+  // Order in the original conversation (for extension imports)
+  conversationIndex?: number | null // 0-based index of QA pair in conversation
 }

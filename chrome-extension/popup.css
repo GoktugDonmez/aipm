@@ -1,0 +1,117 @@
+/* Memoria Extension Popup Styles */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #ffffff;
+  color: #1f2937;
+  line-height: 1.5;
+}
+
+.popup-container {
+  width: 280px;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+}
+
+.popup-main {
+  flex: 1;
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.popup-section h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 12px;
+  letter-spacing: -0.01em;
+}
+
+.popup-description {
+  font-size: 14px;
+  color: #6b7280;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.open-app-btn {
+  width: 100%;
+  max-width: 200px;
+  padding: 12px 24px;
+  background: #10a37f;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: -0.01em;
+}
+
+.open-app-btn:hover {
+  background: #059669;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 163, 127, 0.3);
+}
+
+.open-app-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(16, 163, 127, 0.2);
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #111827;
+    color: #f9fafb;
+  }
+  
+  .popup-section h2 {
+    color: #f9fafb;
+  }
+  
+  .popup-description {
+    color: #9ca3af;
+  }
+  
+  .open-app-btn {
+    background: #059669;
+  }
+  
+  .open-app-btn:hover {
+    background: #047857;
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+  }
+  
+  .open-app-btn:active {
+    box-shadow: 0 2px 6px rgba(5, 150, 105, 0.2);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 320px) {
+  .popup-container {
+    width: 260px;
+  }
+  
+  .popup-main {
+    padding: 24px 20px;
+  }
+  
+  .popup-section h2 {
+    font-size: 18px;
+  }
+}
+

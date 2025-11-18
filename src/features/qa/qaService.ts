@@ -12,6 +12,7 @@ export interface QAPairInput {
     answerId: string
   }
   tags?: string[]
+  conversationIndex?: number | null // Order in conversation
 }
 
 /**
@@ -30,6 +31,7 @@ export function normalizeQAPair(input: QAPairInput): QAPair {
     updatedAt: now,
     tags: input.tags || [],
     originalMessageIds: input.originalMessageIds,
+    conversationIndex: input.conversationIndex,
   }
 }
 
@@ -73,14 +75,150 @@ export async function saveQAPair(qaPair: QAPair): Promise<void> {
 /**
  * Save multiple QA pairs to the database
  * Also creates/updates the corresponding ChatSession record
+ * Filters out duplicates before saving (both in batch and against existing data)
  */
 export async function saveQAPairs(qaPairs: QAPair[]): Promise<void> {
-  await db.qaPairs.bulkPut(qaPairs)
+  // First, filter duplicates within the batch
+  const uniquePairs: QAPair[] = []
+  const seenPairs = new Set<string>()
+  
+  for (const pair of qaPairs) {
+    // Create a unique key for duplicate detection
+    // Priority: originalMessageIds > conversationIndex+content > content only
+    let pairKey: string
+    if (pair.originalMessageIds?.questionId && pair.originalMessageIds?.answerId) {
+      // Use original message IDs for duplicate detection (most reliable)
+      pairKey = `${pair.sessionId}:${pair.originalMessageIds.questionId}:${pair.originalMessageIds.answerId}`
+    } else if (pair.conversationIndex != null) {
+      // Use conversationIndex + content hash for better duplicate detection
+      const questionHash = pair.question.trim().toLowerCase().substring(0, 100)
+      const answerHash = pair.answer.trim().toLowerCase().substring(0, 100)
+      pairKey = `${pair.sessionId}:${pair.conversationIndex}:${questionHash}:${answerHash}`
+    } else {
+      // Fallback: use question+answer hash for duplicate detection
+      const questionHash = pair.question.trim().toLowerCase()
+      const answerHash = pair.answer.trim().toLowerCase()
+      pairKey = `${pair.sessionId}:${questionHash}:${answerHash}`
+    }
+    
+    if (!seenPairs.has(pairKey)) {
+      seenPairs.add(pairKey)
+      uniquePairs.push(pair)
+    } else {
+      console.log('Skipping duplicate QA pair in batch:', pairKey.substring(0, 80))
+    }
+  }
+  
+  if (uniquePairs.length === 0) {
+    console.log('All QA pairs were duplicates, nothing to save')
+    return
+  }
+  
+  // Now check against existing data in database
+  const finalUniquePairs: QAPair[] = []
+  const existingPairs = await db.qaPairs.toArray()
+  const existingKeys = new Set<string>()
+  
+  // Build set of existing pair keys
+  for (const existing of existingPairs) {
+    let existingKey: string
+    if (existing.originalMessageIds?.questionId && existing.originalMessageIds?.answerId) {
+      // Use original message IDs for duplicate detection (most reliable)
+      existingKey = `${existing.sessionId}:${existing.originalMessageIds.questionId}:${existing.originalMessageIds.answerId}`
+    } else if (existing.conversationIndex != null) {
+      // Use conversationIndex + content hash
+      const questionHash = existing.question.trim().toLowerCase().substring(0, 100)
+      const answerHash = existing.answer.trim().toLowerCase().substring(0, 100)
+      existingKey = `${existing.sessionId}:${existing.conversationIndex}:${questionHash}:${answerHash}`
+    } else {
+      // Fallback: use question+answer hash for duplicate detection
+      const questionHash = existing.question.trim().toLowerCase()
+      const answerHash = existing.answer.trim().toLowerCase()
+      existingKey = `${existing.sessionId}:${questionHash}:${answerHash}`
+    }
+    existingKeys.add(existingKey)
+  }
+  
+  // Filter out pairs that already exist in database
+  for (const pair of uniquePairs) {
+    let pairKey: string
+    if (pair.originalMessageIds?.questionId && pair.originalMessageIds?.answerId) {
+      pairKey = `${pair.sessionId}:${pair.originalMessageIds.questionId}:${pair.originalMessageIds.answerId}`
+    } else if (pair.conversationIndex != null) {
+      const questionHash = pair.question.trim().toLowerCase().substring(0, 100)
+      const answerHash = pair.answer.trim().toLowerCase().substring(0, 100)
+      pairKey = `${pair.sessionId}:${pair.conversationIndex}:${questionHash}:${answerHash}`
+    } else {
+      const questionHash = pair.question.trim().toLowerCase()
+      const answerHash = pair.answer.trim().toLowerCase()
+      pairKey = `${pair.sessionId}:${questionHash}:${answerHash}`
+    }
+    
+    if (!existingKeys.has(pairKey)) {
+      finalUniquePairs.push(pair)
+    } else {
+      console.log('Skipping duplicate QA pair (already in database):', {
+        pairKey: pairKey.substring(0, 80),
+        question: pair.question.substring(0, 50),
+        sessionId: pair.sessionId,
+        conversationIndex: pair.conversationIndex
+      })
+    }
+  }
+  
+  if (finalUniquePairs.length === 0) {
+    console.log('All QA pairs already exist in database, nothing to save')
+    return
+  }
+  
+  console.log(`Saving ${finalUniquePairs.length} unique QA pairs (filtered ${qaPairs.length - finalUniquePairs.length} duplicates)`)
+  
+  // Use individual put operations to ensure we can check for duplicates properly
+  // bulkPut would overwrite, so we check each one individually
+  for (const pair of finalUniquePairs) {
+    // Double-check: verify this pair doesn't already exist
+    let pairKey: string
+    if (pair.originalMessageIds?.questionId && pair.originalMessageIds?.answerId) {
+      pairKey = `${pair.sessionId}:${pair.originalMessageIds.questionId}:${pair.originalMessageIds.answerId}`
+    } else if (pair.conversationIndex != null) {
+      const questionHash = pair.question.trim().toLowerCase().substring(0, 100)
+      const answerHash = pair.answer.trim().toLowerCase().substring(0, 100)
+      pairKey = `${pair.sessionId}:${pair.conversationIndex}:${questionHash}:${answerHash}`
+    } else {
+      const questionHash = pair.question.trim().toLowerCase()
+      const answerHash = pair.answer.trim().toLowerCase()
+      pairKey = `${pair.sessionId}:${questionHash}:${answerHash}`
+    }
+    
+    // Check if a pair with this key already exists
+    const existingWithSameKey = existingPairs.find(existing => {
+      let existingKey: string
+      if (existing.originalMessageIds?.questionId && existing.originalMessageIds?.answerId) {
+        existingKey = `${existing.sessionId}:${existing.originalMessageIds.questionId}:${existing.originalMessageIds.answerId}`
+      } else if (existing.conversationIndex != null) {
+        const questionHash = existing.question.trim().toLowerCase().substring(0, 100)
+        const answerHash = existing.answer.trim().toLowerCase().substring(0, 100)
+        existingKey = `${existing.sessionId}:${existing.conversationIndex}:${questionHash}:${answerHash}`
+      } else {
+        const questionHash = existing.question.trim().toLowerCase()
+        const answerHash = existing.answer.trim().toLowerCase()
+        existingKey = `${existing.sessionId}:${questionHash}:${answerHash}`
+      }
+      return existingKey === pairKey
+    })
+    
+    if (!existingWithSameKey) {
+      await db.qaPairs.put(pair)
+      console.log('Saved QA pair:', pairKey.substring(0, 50))
+    } else {
+      console.log('Duplicate detected during save, skipping:', pairKey.substring(0, 50))
+    }
+  }
   
   // Group pairs by sessionId and create/update ChatSession records
   const sessionMap = new Map<string, { pairs: QAPair[]; source: 'import' | 'manual' | 'extension' }>()
   
-  for (const pair of qaPairs) {
+  for (const pair of finalUniquePairs) {
     if (!sessionMap.has(pair.sessionId)) {
       sessionMap.set(pair.sessionId, { pairs: [], source: pair.source })
     }
@@ -90,25 +228,66 @@ export async function saveQAPairs(qaPairs: QAPair[]): Promise<void> {
   // Create/update sessions
   for (const [sessionId, data] of sessionMap.entries()) {
     const pairs = data.pairs
-    const firstPair = pairs[0]
     const lastPair = pairs[pairs.length - 1]
     
-    // Use first question as title (or generate a default)
-    const title = firstPair.question.length > 50 
-      ? firstPair.question.substring(0, 50) + '...'
-      : firstPair.question
+    // Get all QA pairs for this session to find the first one (conversationIndex 0)
+    const allSessionPairs = await db.qaPairs.where('sessionId').equals(sessionId).toArray()
     
-    const session: ChatSession = {
-      id: sessionId,
-      title,
-      source: data.source as 'chatgpt' | 'claude' | 'gemini' | 'other' | 'import' | 'manual' | 'extension',
-      createdAt: firstPair.createdAt,
-      updatedAt: lastPair.updatedAt,
-      messageCount: pairs.length * 2, // Each QA pair = 1 question + 1 answer
-      tags: [],
+    // Find the first interaction (conversationIndex 0) for the title
+    const firstInteraction = allSessionPairs.find(p => p.conversationIndex === 0) || 
+                            allSessionPairs.sort((a, b) => {
+                              // Sort by conversationIndex if available, otherwise by createdAt
+                              if (a.conversationIndex != null && b.conversationIndex != null) {
+                                return a.conversationIndex - b.conversationIndex
+                              }
+                              if (a.conversationIndex != null) return -1
+                              if (b.conversationIndex != null) return 1
+                              return a.createdAt.getTime() - b.createdAt.getTime()
+                            })[0]
+    
+    // Check if session already exists
+    const existingSession = await db.sessions.get(sessionId)
+    
+    if (existingSession) {
+      // Update existing session: recalculate messageCount and update updatedAt
+      const newMessageCount = allSessionPairs.length * 2
+      const newTitle = firstInteraction 
+        ? (firstInteraction.question.length > 50 
+            ? firstInteraction.question.substring(0, 50) + '...'
+            : firstInteraction.question)
+        : existingSession.title
+      
+      console.log(`Updating existing session ${sessionId}: ${allSessionPairs.length} QA pairs (total: ${newMessageCount} messages)`)
+      await db.sessions.update(sessionId, {
+        title: newTitle, // Always update title to first interaction
+        updatedAt: lastPair.updatedAt,
+        messageCount: newMessageCount,
+      })
+    } else {
+      // Create new session
+      // Use first interaction's question as title
+      const title = firstInteraction 
+        ? (firstInteraction.question.length > 50 
+            ? firstInteraction.question.substring(0, 50) + '...'
+            : firstInteraction.question)
+        : (pairs[0].question.length > 50 
+            ? pairs[0].question.substring(0, 50) + '...'
+            : pairs[0].question)
+      
+      console.log(`Creating new session ${sessionId} with ${pairs.length} QA pairs`)
+      
+      const session: ChatSession = {
+        id: sessionId,
+        title,
+        source: data.source as 'chatgpt' | 'claude' | 'gemini' | 'other' | 'import' | 'manual' | 'extension',
+        createdAt: firstInteraction?.createdAt || pairs[0].createdAt,
+        updatedAt: lastPair.updatedAt,
+        messageCount: allSessionPairs.length * 2, // Each QA pair = 1 question + 1 answer
+        tags: [],
+      }
+      
+      await db.sessions.put(session)
     }
-    
-    await db.sessions.put(session)
   }
 
   // Refresh automatic tags for affected sessions

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saved Messages - ChatGPT Saver</title>
+    <link rel="stylesheet" href="saved.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>Saved Messages</h1>
+            <div class="header-actions">
+                <button id="exportBtn" class="btn secondary">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M8 2v8m0 0l-2-2m2 2l2-2m-6 4h8a2 2 0 002-2V4a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                    </svg>
+                </button>
+                <button id="clearAllBtn" class="btn danger">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M2 4h12M5 4V2a1 1 0 011-1h4a1 1 0 011 1v2m3 0v10a2 2 0 01-2 2H4a2 2 0 01-2-2V4h12z"/>
+                    </svg>
+                </button>
+            </div>
+        </header>
+        
+        <main class="main">
+            <div id="emptyState" class="empty-state">
+                <div class="empty-icon">
+                    <svg width="32" height="32" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M4 2h8a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V4a2 2 0 012-2zM8 6v8m0 0l-2-2m2 2l2-2"/>
+                    </svg>
+                </div>
+                <h2>No saved messages</h2>
+                <p>Messages you save from ChatGPT will appear here</p>
+            </div>
+            
+            <div id="messagesContainer" class="messages-container" style="display: none;">
+                <!-- Messages will be dynamically loaded here -->
+            </div>
+        </main>
+        
+        <div class="search-container">
+            <div class="search-bar">
+                <svg class="search-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M7 12A5 5 0 107 2a5 5 0 000 10zM13 13l-2.35-2.35"/>
+                </svg>
+                <input type="text" id="searchInput" placeholder="Search saved messages..." />
+                <button id="clearSearch" class="clear-search" style="display: none;">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M12 4L4 12M4 4l8 8"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="saved.js"></script>
+</body>
+</html>

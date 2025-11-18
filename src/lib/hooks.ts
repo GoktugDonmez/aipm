@@ -97,7 +97,18 @@ export function useQAPairsBySession(sessionId: string) {
   const qaPairs = useLiveQuery(
     async () => {
       const pairs = await db.qaPairs.where('sessionId').equals(sessionId).toArray()
-      return pairs.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+      // Sort by conversationIndex if available (order in original conversation), otherwise by createdAt
+      return pairs.sort((a, b) => {
+        // If both have conversationIndex, sort by that
+        if (a.conversationIndex != null && b.conversationIndex != null) {
+          return a.conversationIndex - b.conversationIndex
+        }
+        // If only one has conversationIndex, prioritize it
+        if (a.conversationIndex != null) return -1
+        if (b.conversationIndex != null) return 1
+        // Otherwise sort by createdAt
+        return a.createdAt.getTime() - b.createdAt.getTime()
+      })
     },
     [sessionId]
   )

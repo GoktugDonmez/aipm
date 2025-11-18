@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Icon Generator</title>
+</head>
+<body>
+    <canvas id="canvas16" width="16" height="16"></canvas>
+    <canvas id="canvas48" width="48" height="48"></canvas>
+    <canvas id="canvas128" width="128" height="128"></canvas>
+    
+    <script>
+        function createIcon(size, canvasId) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            
+            // Background
+            ctx.fillStyle = '#10a37f';
+            ctx.fillRect(0, 0, size, size);
+            
+            // Add rounded corners effect
+            ctx.globalCompositeOperation = 'destination-in';
+            ctx.beginPath();
+            ctx.roundRect(0, 0, size, size, size * 0.2);
+            ctx.fill();
+            ctx.globalCompositeOperation = 'source-over';
+            
+            // Draw a simple chat bubble icon
+            ctx.fillStyle = 'white';
+            ctx.font = `${size * 0.6}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('💬', size / 2, size / 2);
+            
+            return canvas.toDataURL('image/png');
+        }
+        
+        // Generate all icons
+        const icon16 = createIcon(16, 'canvas16');
+        const icon48 = createIcon(48, 'canvas48');
+        const icon128 = createIcon(128, 'canvas128');
+        
+        console.log('16x16 icon:', icon16);
+        console.log('48x48 icon:', icon48);
+        console.log('128x128 icon:', icon128);
+        
+        // Create download links
+        function downloadIcon(dataUrl, filename) {
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = dataUrl;
+            link.click();
+        }
+        
+        // Add download buttons
+        const downloadDiv = document.createElement('div');
+        downloadDiv.innerHTML = `
+            <button onclick="downloadIcon('${icon16}', 'icon16.png')">Download 16x16</button>
+            <button onclick="downloadIcon('${icon48}', 'icon48.png')">Download 48x48</button>
+            <button onclick="downloadIcon('${icon128}', 'icon128.png')">Download 128x128</button>
+        `;
+        document.body.appendChild(downloadDiv);
+    </script>
+</body>
+</html>

@@ -1,0 +1,133 @@
+/* Memoria Extension - Minimalistic Button Styles */
+
+.memoria-button-wrapper {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  padding: 8px 0;
+  justify-content: flex-start;
+  width: 100%;
+  position: relative;
+}
+
+.memoria-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Minimalistic Save button */
+.below-message .memoria-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  color: #6b7280;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.below-message .memoria-btn:hover {
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+  color: #374151;
+  transform: none;
+  box-shadow: none;
+}
+
+.below-message .memoria-btn:active {
+  background: #e5e7eb;
+  transform: scale(0.95);
+}
+
+.memoria-btn:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.save-btn:hover {
+  background: #f0fdf4;
+  border-color: #22c55e;
+  color: #166534;
+}
+
+/* Notification animations */
+@keyframes memoriaSlideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes memoriaSlideOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .memoria-btn {
+    color: #9ca3af;
+  }
+  
+  .below-message .memoria-btn {
+    color: #9ca3af;
+  }
+  
+  .below-message .memoria-btn:hover {
+    background: #374151;
+    border-color: #4b5563;
+    color: #d1d5db;
+  }
+  
+  .below-message .memoria-btn:active {
+    background: #4b5563;
+  }
+  
+  .save-btn:hover {
+    background: #166534;
+    border-color: #22c55e;
+    color: #86efac;
+  }
+}
+
+/* Ensure buttons don't interfere with ChatGPT's layout */
+[data-message-author-role="assistant"] .memoria-button-wrapper,
+.group\/conversation-turn .memoria-button-wrapper {
+  margin-left: auto;
+  max-width: fit-content;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .memoria-button-wrapper {
+    justify-content: flex-start;
+    margin-top: 8px;
+  }
+}
+
