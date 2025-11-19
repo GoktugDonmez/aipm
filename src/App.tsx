@@ -4,6 +4,7 @@ import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
 import Search from './pages/Search'
 import Visualize from './pages/Visualize'
+import Roadmap from './pages/Roadmap'
 import Settings from './pages/Settings'
 
 function App() {
@@ -14,6 +15,7 @@ function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/search" element={<Search />} />
           <Route path="/visualize" element={<Visualize />} />
+          <Route path="/roadmap" element={<Roadmap />} />
           <Route path="/settings" element={<Settings />} />
         </Routes>
       </Layout>

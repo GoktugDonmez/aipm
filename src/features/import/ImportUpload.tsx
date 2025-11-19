@@ -56,35 +56,33 @@ export default function ImportUpload({ onImportComplete }: ImportUploadProps) {
     }
   }
 
-  const importFromDataset = async (dataset: unknown, filename: string) => {
+  const importFromDataset = async (conversations: any[], mockFilename: string) => {
+    setImporting(true)
+    setError(null)
+    setProgress(0)
+    setPendingMockFilename(mockFilename)
+
     try {
-      setImporting(true)
-      setProgress(0)
-      setError(null)
-      setPendingMockFilename(filename)
-
       const adapter = new ChatGPTImportAdapter()
-      const file = new File([JSON.stringify(dataset)], filename, { type: 'application/json' })
+      const file = new File([JSON.stringify(conversations)], mockFilename, {
+        type: 'application/json',
+      })
 
-      setProgress(20)
       const qaPairs = await parseFileForQAPairs(file, adapter)
 
-      if (qaPairs.length > 0) {
-        setExtractedQAPairs(qaPairs)
-        setShowQASelection(true)
-        setImporting(false)
-        setProgress(0)
-      } else {
-        await importFile(file, adapter, (p) => setProgress(20 + p * 0.8))
-        onImportComplete?.()
-        setImporting(false)
-        setProgress(0)
+      if (qaPairs.length === 0) {
+        setError('No question/answer pairs found in mock dataset')
+        setShowQASelection(false)
+        return
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Import failed')
+
+      setExtractedQAPairs(qaPairs)
+      setShowQASelection(true)
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
       setImporting(false)
       setProgress(0)
-    } finally {
       setPendingMockFilename(null)
     }
   }

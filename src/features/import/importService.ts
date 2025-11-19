@@ -50,16 +50,20 @@ export class ChatGPTImportAdapter implements ImportAdapter {
   async parse(file: File): Promise<{ sessions: ChatSession[]; messages: Message[] }> {
     const text = await file.text()
     const conversations: ChatGPTExport[] = JSON.parse(text)
+    console.log(`[Import] Parsing ${conversations.length} conversations`)
     
     const sessions: ChatSession[] = []
     const messages: Message[] = []
     
     for (const conv of conversations) {
       // Extract messages from mapping
-      const convMessages = Object.values(conv.mapping)
+      const mappingValues = Object.values(conv.mapping)
+      const convMessages = mappingValues
         .filter(item => item.message)
         .sort((a, b) => (a.message?.create_time || 0) - (b.message?.create_time || 0))
       
+      console.log(`[Import] Session ${conv.id}: Found ${convMessages.length} messages (from ${mappingValues.length} nodes)`)
+
       sessions.push({
         id: conv.id,
         title: conv.title,
@@ -84,6 +88,7 @@ export class ChatGPTImportAdapter implements ImportAdapter {
       })
     }
     
+    console.log(`[Import] Total extracted: ${sessions.length} sessions, ${messages.length} messages`)
     return { sessions, messages }
   }
 }
@@ -134,8 +139,13 @@ export async function importFile(
   const { db } = await import('@/lib/db')
   
   await db.transaction('rw', db.sessions, db.messages, async () => {
+    console.log(`[Import] Saving to DB: ${sessions.length} sessions, ${messages.length} messages`)
     await db.sessions.bulkPut(sessions)
     await db.messages.bulkPut(messages)
+    
+    // Verify save
+    const count = await db.messages.count()
+    console.log(`[Import] Total messages in DB after save: ${count}`)
   })
   
   onProgress?.(85)
