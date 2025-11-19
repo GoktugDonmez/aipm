@@ -53,13 +53,20 @@ cp .env.example .env
 The roadmap feature requires a backend server to communicate with Google Gemini API:
 
 ```bash
+root directory
+
+npm install 
+
+cp .env.example .env 
+
 # Navigate to server directory
+
 cd server
 
 # Install server dependencies
 npm install
 
-# Copy environment template
+# Copy environment template ANOTHER ENV 
 cp .env.example .env
 
 # Edit server/.env and add your Gemini API key
