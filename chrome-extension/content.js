@@ -46,6 +46,7 @@ function createSaveIcon() {
   svg.setAttribute('stroke-width', '1.5');
   svg.setAttribute('stroke-linecap', 'round');
   svg.setAttribute('stroke-linejoin', 'round');
+  svg.style.cssText = 'width: 16px; height: 16px; color: inherit;';
   
   // Save icon (bookmark/disk style)
   const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -564,18 +565,311 @@ function showNotification(message, type = 'success') {
 }
 
 function addButtonsToMessage(messageElement) {
-  // Check if buttons already exist
-  if (messageElement.querySelector('.memoria-btn')) {
+  // Check if buttons already exist in the message or its conversation turn
+  const conversationTurn = messageElement.closest('[data-testid*="conversation-turn"]') ||
+                          messageElement.closest('.group\\/conversation-turn') ||
+                          messageElement.closest('[class*="conversation-turn"]');
+  const searchScope = conversationTurn || messageElement;
+  
+  // Check if Memoria button already exists (more reliable check)
+  if (searchScope.querySelector('.memoria-btn[data-memoria-button="true"]')) {
+    console.log('Memoria button already exists, skipping');
     return;
   }
   
-  // Add a small delay to ensure ChatGPT has finished rendering
+  // Remove any buttons that were incorrectly placed (below message)
+  const incorrectButtons = searchScope.querySelectorAll('.memoria-button-wrapper.below-message, .memoria-btn:not([data-memoria-button="true"])');
+  incorrectButtons.forEach(btn => {
+    console.log('Removing incorrectly placed button:', btn);
+    btn.remove();
+  });
+  
+  // Wait for the action bar to be available
+  // ChatGPT's action buttons appear after the message is fully rendered
+  waitForActionBar(messageElement, 0, 10); // Try up to 10 times with increasing delays
+}
+
+function waitForActionBar(messageElement, attempt, maxAttempts) {
+  if (attempt >= maxAttempts) {
+    console.log('Action bar not found after', maxAttempts, 'attempts, giving up');
+    return;
+  }
+  
+  // Start with a longer delay for first attempt (message might still be generating)
+  // Then use shorter delays for retries
+  const delay = attempt === 0 ? 1500 : 500 + (attempt * 200); // 1500ms first, then 700ms, 900ms, etc.
+  
   setTimeout(() => {
-    // Check again if buttons were added during the delay
-    if (!messageElement.querySelector('.memoria-btn')) {
-      addButtonsBelowMessage(messageElement);
+    const conversationTurn = messageElement.closest('[data-testid*="conversation-turn"]') ||
+                            messageElement.closest('.group\\/conversation-turn') ||
+                            messageElement.closest('[class*="conversation-turn"]');
+    const searchScope = conversationTurn || messageElement;
+    
+    // Check if button already exists
+    if (searchScope.querySelector('.memoria-btn[data-memoria-button="true"]')) {
+      console.log('Memoria button already exists, skipping');
+      return;
     }
-  }, 500);
+    
+    // Check if action bar exists (look for ellipsis button or action buttons)
+    const hasActionBar = searchScope.querySelector('button[aria-haspopup="menu"]') ||
+                        searchScope.querySelector('button[data-testid="copy-turn-action-button"]') ||
+                        searchScope.querySelector('button[aria-label="Copier"]') ||
+                        searchScope.querySelector('button[aria-label="Copy"]');
+    
+    if (hasActionBar) {
+      // Action bar is available, try to add button
+      console.log('Action bar found, attempting to add button (attempt', attempt + 1, ')');
+      addButtonsToActionBar(messageElement);
+      
+      // Verify button was added correctly (in action bar, not below message)
+      setTimeout(() => {
+        const addedButton = searchScope.querySelector('.memoria-btn[data-memoria-button="true"]');
+        if (addedButton) {
+          // Check if it's in the wrong place (below message wrapper)
+          const isInWrapper = addedButton.closest('.memoria-button-wrapper.below-message');
+          if (isInWrapper) {
+            console.log('Button was added in wrong place, removing and retrying');
+            addedButton.remove();
+            waitForActionBar(messageElement, attempt + 1, maxAttempts);
+          } else {
+            console.log('Button successfully added to action bar');
+          }
+        } else {
+          // Button wasn't added, retry
+          console.log('Button was not added, retrying');
+          waitForActionBar(messageElement, attempt + 1, maxAttempts);
+        }
+      }, 200);
+    } else {
+      // Action bar not ready yet, retry
+      console.log('Action bar not ready yet, retrying in', delay, 'ms (attempt', attempt + 1, ')');
+      waitForActionBar(messageElement, attempt + 1, maxAttempts);
+    }
+  }, delay);
+}
+
+function addButtonsToActionBar(messageElement) {
+  console.log('Looking for action bar for message element:', messageElement);
+  
+  // Strategy 1: Find the ellipsis button (More actions) associated with this message
+  let ellipsisButton = null;
+  const ellipsisSelectors = [
+    'button[aria-label="Plus d\'actions"]',
+    'button[aria-label="More actions"]',
+    'button[aria-haspopup="menu"][aria-label*="actions" i]',
+    'button[aria-haspopup="menu"][aria-label*="Plus" i]',
+    'button[aria-haspopup="menu"]', // Generic fallback
+  ];
+  
+  // First, try to find within the message element's conversation turn
+  let conversationTurn = messageElement.closest('[data-testid*="conversation-turn"]') ||
+                         messageElement.closest('.group\\/conversation-turn') ||
+                         messageElement.closest('[class*="conversation-turn"]');
+  
+  if (!conversationTurn) {
+    // Try to find by going up the DOM tree
+    let parent = messageElement.parentElement;
+    let depth = 0;
+    while (parent && depth < 10) {
+      if (parent.querySelector && (
+          parent.querySelector('[data-testid*="conversation-turn"]') ||
+          parent.classList.contains('group/conversation-turn') ||
+          parent.className.includes('conversation-turn')
+        )) {
+        conversationTurn = parent;
+        break;
+      }
+      parent = parent.parentElement;
+      depth++;
+    }
+  }
+  
+  // Search for ellipsis button in the conversation turn or message element
+  const searchScope = conversationTurn || messageElement;
+  
+  for (const selector of ellipsisSelectors) {
+    try {
+      ellipsisButton = searchScope.querySelector(selector);
+      if (ellipsisButton) {
+        console.log('Found ellipsis button in scope:', ellipsisButton);
+        break;
+      }
+    } catch (e) {
+      // Ignore selector errors
+    }
+  }
+  
+  // If not found in scope, try finding all ellipsis buttons and pick the closest one
+  if (!ellipsisButton && conversationTurn) {
+    try {
+      const allEllipsisButtons = document.querySelectorAll('button[aria-haspopup="menu"]');
+      // Find the ellipsis button that's closest to this conversation turn
+      for (const btn of allEllipsisButtons) {
+        if (conversationTurn.contains(btn) || btn.closest('[data-testid*="conversation-turn"]') === conversationTurn) {
+          ellipsisButton = btn;
+          console.log('Found ellipsis button by proximity:', ellipsisButton);
+          break;
+        }
+      }
+    } catch (e) {
+      console.warn('Error finding ellipsis buttons:', e);
+    }
+  }
+  
+  // If we found the ellipsis button, find its action bar container
+  // The action bar is the div with classes like "flex flex-wrap items-center gap-y-4 p-1"
+  if (ellipsisButton) {
+    // Look for the parent div that has flex-wrap and items-center classes (the action bar container)
+    let container = ellipsisButton.parentElement;
+    let attempts = 0;
+    
+    while (container && attempts < 8) {
+      const classList = container.className || '';
+      // Check if this is the action bar container (has flex-wrap and items-center)
+      const hasFlexWrap = classList.includes('flex-wrap') || classList.includes('flex') && classList.includes('items-center');
+      const hasGap = classList.includes('gap');
+      
+      if (hasFlexWrap || (hasGap && container.querySelectorAll('button').length >= 2)) {
+        // This is the action bar container
+        console.log('Found action bar container:', container, 'classes:', classList);
+        
+        // Check if button already exists in this container
+        if (container.querySelector('.memoria-btn[data-memoria-button="true"]')) {
+          console.log('Memoria button already exists in this container, skipping');
+          return;
+        }
+        
+        const button = createButton(BUTTON_CONFIG.buttons[0], messageElement);
+        // Mark with data attribute for reliable detection
+        button.setAttribute('data-memoria-button', 'true');
+        // Style to match ChatGPT's action buttons but with white color
+        button.className = 'memoria-btn memoria-action-bar-btn hover:bg-token-bg-secondary rounded-lg touch:w-10 flex h-8 w-8 items-center justify-center';
+        button.style.cssText = `
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 32px;
+          height: 32px;
+          padding: 0;
+          border: none;
+          background: transparent;
+          border-radius: 6px;
+          cursor: pointer;
+          color: white;
+        `;
+        
+        // Insert directly before the ellipsis button (no wrapper)
+        container.insertBefore(button, ellipsisButton);
+        console.log('Added Memoria button to action bar before ellipsis');
+        return;
+      }
+      container = container.parentElement;
+      attempts++;
+    }
+    
+    // Fallback: if we found ellipsis but couldn't find the exact container, use its direct parent
+    if (ellipsisButton.parentElement) {
+      // Check if button already exists
+      if (ellipsisButton.parentElement.querySelector('.memoria-btn[data-memoria-button="true"]')) {
+        console.log('Memoria button already exists in ellipsis parent, skipping');
+        return;
+      }
+      
+      console.log('Using ellipsis direct parent as container');
+      const button = createButton(BUTTON_CONFIG.buttons[0], messageElement);
+      button.setAttribute('data-memoria-button', 'true');
+      button.className = 'memoria-btn memoria-action-bar-btn hover:bg-token-bg-secondary rounded-lg touch:w-10 flex h-8 w-8 items-center justify-center';
+      button.style.cssText = `
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        border: none;
+        background: transparent;
+        border-radius: 6px;
+        cursor: pointer;
+        color: white;
+      `;
+      ellipsisButton.parentElement.insertBefore(button, ellipsisButton);
+      console.log('Added Memoria button before ellipsis in direct parent');
+      return;
+    }
+  }
+  
+  // Strategy 2: Find any action button and locate the action bar
+  const actionButtonSelectors = [
+    'button[data-testid="copy-turn-action-button"]',
+    'button[aria-label="Copier"]',
+    'button[aria-label="Copy"]',
+    'button[aria-label*="Copier" i]',
+    'button[aria-label*="Copy" i]',
+  ];
+  
+  for (const selector of actionButtonSelectors) {
+    try {
+      const actionButton = searchScope.querySelector(selector);
+      if (actionButton) {
+        console.log('Found action button:', actionButton);
+        // Find the container with multiple buttons
+        let container = actionButton.parentElement;
+        let attempts = 0;
+        
+        while (container && attempts < 5) {
+          const buttons = container.querySelectorAll('button');
+          if (buttons.length >= 3) {
+            // Check if button already exists
+            if (container.querySelector('.memoria-btn[data-memoria-button="true"]')) {
+              console.log('Memoria button already exists in action bar, skipping');
+              return;
+            }
+            
+            // This looks like the action bar
+            console.log('Found action bar via action button:', container);
+            
+            const button = createButton(BUTTON_CONFIG.buttons[0], messageElement);
+            button.setAttribute('data-memoria-button', 'true');
+            // Style to match ChatGPT's action buttons but with white color
+            button.className = 'memoria-btn memoria-action-bar-btn hover:bg-token-bg-secondary rounded-lg touch:w-10 flex h-8 w-8 items-center justify-center';
+            button.style.cssText = `
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              width: 32px;
+              height: 32px;
+              padding: 0;
+              border: none;
+              background: transparent;
+              border-radius: 6px;
+              cursor: pointer;
+              color: white;
+            `;
+            
+            // Try to insert before ellipsis, otherwise at the end
+            const ellipsis = container.querySelector('button[aria-haspopup="menu"]');
+            if (ellipsis) {
+              container.insertBefore(button, ellipsis);
+            } else {
+              container.appendChild(button);
+            }
+            console.log('Added Memoria button to action bar');
+            return;
+          }
+          container = container.parentElement;
+          attempts++;
+        }
+      }
+    } catch (e) {
+      console.warn('Error with action button selector:', selector, e);
+    }
+  }
+  
+  // Don't use fallback - if action bar doesn't exist, wait and retry
+  // This prevents buttons from appearing in wrong places
+  console.log('Could not find action bar, will retry later');
+  // Don't call addButtonsBelowMessage - we only want buttons in the action bar
 }
 
 function addButtonsBelowMessage(messageElement) {
@@ -648,13 +942,40 @@ function findAndProcessMessages() {
   let foundMessages = new Set();
   
   messageSelectors.forEach(selector => {
-    const messages = document.querySelectorAll(selector);
-    messages.forEach(message => {
-      if (!foundMessages.has(message)) {
-        foundMessages.add(message);
-        addButtonsToMessage(message);
-      }
-    });
+    try {
+      const messages = document.querySelectorAll(selector);
+      messages.forEach(message => {
+        // First check if button already exists in this message's conversation turn
+        const conversationTurn = message.closest('[data-testid*="conversation-turn"]') ||
+                                message.closest('.group\\/conversation-turn') ||
+                                message.closest('[class*="conversation-turn"]');
+        const searchScope = conversationTurn || message;
+        
+        // Skip if button already exists
+        if (searchScope.querySelector('.memoria-btn[data-memoria-button="true"]')) {
+          return; // Skip this message
+        }
+        
+        // Use a unique identifier for each message to avoid duplicates
+        let messageId = message.getAttribute('data-message-id') || 
+                       message.id || 
+                       message.getAttribute('data-testid');
+        
+        // If no ID, create one from the message content hash
+        if (!messageId) {
+          const textContent = message.textContent || '';
+          const contentHash = btoa(textContent.substring(0, 100)).replace(/[^a-zA-Z0-9]/g, '').substring(0, 16);
+          messageId = `msg-${contentHash}`;
+        }
+        
+        if (!foundMessages.has(messageId)) {
+          foundMessages.add(messageId);
+          addButtonsToMessage(message);
+        }
+      });
+    } catch (e) {
+      console.warn('Error processing messages with selector:', selector, e);
+    }
   });
 }
 
