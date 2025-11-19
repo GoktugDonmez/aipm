@@ -170,6 +170,77 @@ function dedupeNormalizedTags(tags: string[]): string[] {
   return output.slice(0, 6)
 }
 
+const TAG_FILLER_TOKENS = new Set<string>([
+  'tips', 'tip', 'guide', 'guides', 'guideline', 'guidelines', 'basics', 'overview', 'introduction',
+  'intro', 'process', 'processes', 'structure', 'structures', 'strategy', 'strategies', 'concepts',
+  'concept', 'information', 'insight', 'insights', 'ideas', 'idea', 'general', 'fundamentals',
+])
+
+const TOKEN_SYNONYMS = new Map<string, string>([
+  ['cv', 'resume'],
+  ['cvs', 'resume'],
+  ['resume', 'resume'],
+  ['resumes', 'resume'],
+  ['curriculum', 'resume'],
+  ['vitae', 'resume'],
+  ['internships', 'internship'],
+  ['interviewing', 'interview'],
+  ['interviews', 'interview'],
+])
+
+const SPECIAL_SHORT_TOKENS = new Set<string>(['cv'])
+
+function normalizeMeaningfulTokens(tag: string): string[] {
+  const cleaned = tag
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .map((token) => TOKEN_SYNONYMS.get(token) || token)
+    .map(stemToken)
+    .filter((token) => token.length > 0 && !TAG_FILLER_TOKENS.has(token))
+
+  if (cleaned.length > 0) {
+    return Array.from(new Set(cleaned))
+  }
+
+  return [tag.toLowerCase()]
+}
+
+function stemToken(token: string): string {
+  let base = token
+  if (base.endsWith('ies') && base.length > 4) {
+    base = base.slice(0, -3) + 'y'
+  } else if (base.endsWith('ing') && base.length > 5) {
+    base = base.slice(0, -3)
+  } else if (base.endsWith('ed') && base.length > 4) {
+    base = base.slice(0, -2)
+  } else if (base.endsWith('es') && base.length > 4) {
+    base = base.slice(0, -2)
+  } else if (base.endsWith('s') && base.length > 3) {
+    base = base.slice(0, -1)
+  }
+  return base
+}
+
+function applyCanonicalMapping(tags: string[] | undefined, canonicalMap: Map<string, string>): string[] {
+  const values = Array.isArray(tags) ? tags : []
+  const seen = new Set<string>()
+  const normalized: string[] = []
+
+  values.forEach((tag) => {
+    const fallback = formatTagLabel(tag)
+    const canonical = canonicalMap.get(normalizeTagKey(tag)) || fallback
+    const key = normalizeTagKey(canonical)
+    if (!key || seen.has(key)) {
+      return
+    }
+    seen.add(key)
+    normalized.push(canonical)
+  })
+
+  return normalized
+}
+
 function parseJSON(content?: string | null): any {
   if (!content) return undefined
   try {
@@ -336,7 +407,7 @@ export async function autoTagSessions(sessionIds?: string[]): Promise<void> {
 
   allSessions.forEach((session) => {
     const originalTags = session.tags || []
-    const normalized = originalTags.map((tag) => canonicalMap.get(normalizeTagKey(tag)) || formatTagLabel(tag))
+    const normalized = applyCanonicalMapping(originalTags, canonicalMap)
 
     if (!arraysEqual(originalTags, normalized)) {
       canonicalUpdates.push({ sessionId: session.id, tags: normalized })
@@ -385,18 +456,19 @@ class TagPoolRefiner {
     }
 
     if (!isLLMAvailable()) {
-      return this.buildFallbackMap(unique)
+      return this.mergeCanonicalLabels(this.buildFallbackMap(unique))
     }
 
     try {
       const groups = await this.clusterWithLLM(unique)
       if (!groups || groups.length === 0) {
-        return this.buildFallbackMap(unique)
+        return this.mergeCanonicalLabels(this.buildFallbackMap(unique))
       }
-      return this.aliasesToCanonicalMap(unique, groups)
+      const canonical = this.aliasesToCanonicalMap(unique, groups)
+      return this.mergeCanonicalLabels(canonical)
     } catch (error) {
       console.warn('LLM tag pooling failed, using fallback heuristics:', error)
-      return this.buildFallbackMap(unique)
+      return this.mergeCanonicalLabels(this.buildFallbackMap(unique))
     }
   }
 
@@ -430,6 +502,56 @@ class TagPoolRefiner {
     })
 
     return map
+  }
+
+  private mergeCanonicalLabels(map: Map<string, string>): Map<string, string> {
+    if (map.size <= 1) {
+      return map
+    }
+
+    const labels = Array.from(new Set(map.values()))
+    if (labels.length <= 1) {
+      return map
+    }
+
+    const tokensList = labels.map((label) => ({
+      label,
+      tokens: normalizeMeaningfulTokens(label),
+    }))
+
+    const uf = new UnionFind(labels.length)
+
+    for (let i = 0; i < tokensList.length; i++) {
+      for (let j = i + 1; j < tokensList.length; j++) {
+        if (shouldMergeTokenSets(tokensList[i].tokens, tokensList[j].tokens)) {
+          uf.union(i, j)
+        }
+      }
+    }
+
+    const replacement = new Map<string, string>()
+    const grouped = new Map<number, string[]>()
+
+    tokensList.forEach((entry, index) => {
+      const root = uf.find(index)
+      if (!grouped.has(root)) {
+        grouped.set(root, [])
+      }
+      grouped.get(root)!.push(entry.label)
+    })
+
+    grouped.forEach((groupLabels) => {
+      groupLabels.sort((a, b) => a.length - b.length || a.localeCompare(b))
+      const canonical = groupLabels[0]
+      groupLabels.forEach((label) => replacement.set(label, canonical))
+    })
+
+    const merged = new Map<string, string>()
+    map.forEach((label, key) => {
+      merged.set(key, replacement.get(label) || label)
+    })
+
+    return merged
   }
 
   private async clusterWithLLM(tagNames: string[]): Promise<CanonicalTagGroup[]> {
@@ -519,4 +641,66 @@ function arraysEqual(a: string[] = [], b: string[] = []): boolean {
     return false
   }
   return a.every((value, index) => normalizeTagKey(value) === normalizeTagKey(b[index]))
+}
+
+function shouldMergeTokenSets(tokensA: string[], tokensB: string[]): boolean {
+  if (tokensA.length === 0 || tokensB.length === 0) {
+    return false
+  }
+
+  const setA = new Set(tokensA)
+  const setB = new Set(tokensB)
+  const intersection: string[] = []
+
+  setA.forEach((token) => {
+    if (setB.has(token)) {
+      intersection.push(token)
+    }
+  })
+
+  if (intersection.length === 0) {
+    return false
+  }
+
+  const hasAnchor = intersection.some((token) => token.length >= 3 || SPECIAL_SHORT_TOKENS.has(token))
+  if (!hasAnchor) {
+    return false
+  }
+
+  const coverage = intersection.length / Math.min(setA.size, setB.size)
+  return coverage >= 0.5
+}
+
+class UnionFind {
+  private parent: number[]
+  private rank: number[]
+
+  constructor(size: number) {
+    this.parent = Array.from({ length: size }, (_, index) => index)
+    this.rank = Array(size).fill(0)
+  }
+
+  find(x: number): number {
+    if (this.parent[x] !== x) {
+      this.parent[x] = this.find(this.parent[x])
+    }
+    return this.parent[x]
+  }
+
+  union(a: number, b: number): void {
+    const rootA = this.find(a)
+    const rootB = this.find(b)
+    if (rootA === rootB) {
+      return
+    }
+
+    if (this.rank[rootA] < this.rank[rootB]) {
+      this.parent[rootA] = rootB
+    } else if (this.rank[rootA] > this.rank[rootB]) {
+      this.parent[rootB] = rootA
+    } else {
+      this.parent[rootB] = rootA
+      this.rank[rootA] += 1
+    }
+  }
 }

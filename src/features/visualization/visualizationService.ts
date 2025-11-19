@@ -76,7 +76,7 @@ export async function generateGraphData(
     label: session.title,
     type: 'session',
     size: Math.max(16, Math.log(session.messageCount + 1) * 10 + 14),
-    color: sourceColor(session.source),
+    color: '#2563eb',
   }))
 
   const tagUsage = new Map<string, { count: number; label: string }>()
@@ -106,9 +106,9 @@ export async function generateGraphData(
 
   const tagNodes: GraphNode[] = sortedTags.map(([normalized, usage]) => {
     const tagRecord = tagMap.get(normalized)
-    const label = tagRecord?.name ?? usage.label
-    const baseCount = tagRecord?.sessionCount ?? usage.count
-    const color = tagRecord?.color ?? '#f97316'
+  const label = tagRecord?.name ?? usage.label
+  const baseCount = tagRecord?.sessionCount ?? usage.count
+  const color = '#f97316'
 
     return {
       id: `tag-${normalized}`,
@@ -185,23 +185,6 @@ export async function generateGraphData(
       totalSessions: prioritizedSessions.length,
       hiddenSessions,
     },
-  }
-}
-
-function sourceColor(source: ChatSession['source']): string {
-  switch (source) {
-    case 'chatgpt':
-      return '#0ea5e9'
-    case 'claude':
-      return '#a855f7'
-    case 'gemini':
-      return '#22d3ee'
-    case 'manual':
-      return '#10b981'
-    case 'extension':
-      return '#f97316'
-    default:
-      return '#3b82f6'
   }
 }
 
