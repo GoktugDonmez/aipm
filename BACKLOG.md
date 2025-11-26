@@ -1,6 +1,10 @@
 # Backlog
 
 ## Completed
+- **Chrome Extension Multi-Platform Support (Nov 26, 2025):**
+  - Extended support to Claude and Gemini platforms in addition to ChatGPT
+  - Implemented source tracking to automatically tag conversations by platform
+  - Enhanced search functionality to index conversations across all three platforms
 - Implemented AI-Powered Roadmap Generation feature:
   - **Backend:** Express server (port 3001) integrating Google Gemini 2.5 Pro for structured knowledge synthesis.
   - **Frontend:** New `/roadmap` page with natural language query input and collapsible session selection.
@@ -20,6 +24,10 @@
 - The Current implementation for auto-tagging is a classical TF/IDF keyword extraction, used now to build a demo chat connection to be able to visualize the graph. it will be changed later on. 
 
 ## Implementation Log
+- **2025-11-26 – Chrome Extension Multi-Platform Support** *(chrome-extension/content.js)* – Extended extension to support Claude and Gemini platforms.
+  - **Platform Expansion:** Implemented platform-agnostic architecture supporting ChatGPT, Claude, and Gemini
+  - **Source Tracking:** Added automatic tagging system to identify and store conversation origin
+  - **Search Enhancement:** Updated search indexing to work seamlessly across all supported platforms
 - **2025-11-18 - Roadmap visualization remake** - Reimplemented Roadmap Visualization (Roadmap 2.0):
  Replaced D3 force graph with a static tree based approach
 - **2025-11-18 – AI Roadmap Feature** *(server/, src/pages/Roadmap.tsx, src/features/roadmap/)* – Implemented end-to-end roadmap generation.

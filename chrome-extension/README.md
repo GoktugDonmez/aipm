@@ -1,12 +1,14 @@
 # Memoria Chrome Extension
 
-A Chrome extension that adds a "Save to Memoria" button below each ChatGPT assistant answer, allowing you to quickly save question-answer interactions to your Memoria knowledge base.
+A Chrome extension that enables seamless saving of AI conversations from multiple platforms to your Memoria knowledge base.
 
 ## Features
 
-- **One-click save**: Save ChatGPT interactions (question + answer) to Memoria
-- **Automatic detection**: Automatically detects new ChatGPT messages and adds buttons
-- **Minimalistic UI**: Clean, unobtrusive button design that matches Memoria's aesthetic
+- **Multi-platform support**: Works across ChatGPT, Claude, and Gemini
+- **One-click save**: Save AI interactions (question + answer) to Memoria
+- **Automatic detection**: Detects new messages across all supported platforms
+- **Source tracking**: Automatically tags conversations with their origin platform
+- **Minimalistic UI**: Clean, unobtrusive button design that integrates naturally
 - **Success notifications**: Visual feedback when interactions are saved
 - **Quick access**: Extension popup opens Memoria app directly
 
@@ -21,10 +23,10 @@ A Chrome extension that adds a "Save to Memoria" button below each ChatGPT assis
 
 ## Usage
 
-1. **Navigate to ChatGPT**: Go to [chat.openai.com](https://chat.openai.com) or [chatgpt.com](https://chatgpt.com)
-2. **Start a conversation**: Ask ChatGPT a question
-3. **Save interactions**: After ChatGPT responds, you'll see a "Save to Memoria" button below the answer
-4. **Click the button**: The interaction (question + answer) will be saved to localStorage
+1. **Navigate to any supported AI platform**: ChatGPT, Claude, or Gemini
+2. **Start a conversation**: Ask your AI assistant a question
+3. **Save interactions**: After the AI responds, you'll see a "Save to Memoria" button below the answer
+4. **Click the button**: The interaction (question + answer) will be saved with source tracking
 5. **Open Memoria**: Click the extension icon and select "Open Memoria App" to view your saved interactions
 6. **Import in Memoria**: The Memoria app will automatically detect and offer to import the saved interaction
 
@@ -82,6 +84,14 @@ The extension saves data to `localStorage` with the key `memoriaExtensionData`:
 2. **Check ExtensionDataReceiver**: The app should automatically poll `localStorage` every 2 seconds
 3. **Refresh the app**: Try refreshing the Memoria app page
 4. **Check data format**: Verify the data in `localStorage` matches the expected format
+
+## Recent Updates
+
+### November 26, 2025 - Multi-Platform Expansion
+
+- **Extended platform support**: Added compatibility for Claude and Gemini in addition to ChatGPT
+- **Improved reliability**: Enhanced detection and integration across all three platforms
+- **Source tracking**: Automatically tags saved conversations with their origin platform for better organization
 
 ## Development
 
