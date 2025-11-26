@@ -316,7 +316,7 @@ export default function Visualize() {
               </Flex>
 
               <Text size="2" color="gray">
-                Drag nodes to explore connections. Scroll to zoom. Green circles are conversations, orange are shared concepts.
+                Drag nodes to explore connections. Scroll to zoom. Blue circles are conversations, orange are shared concepts.
               </Text>
 
               {graphData.meta.hiddenSessions > 0 && (

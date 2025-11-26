@@ -5,7 +5,7 @@ import { autoTagSessions } from '@/features/tags/taggingService'
 export interface QAPairInput {
   question: string
   answer: string
-  source: 'import' | 'manual' | 'extension'
+  source: 'import' | 'manual' | 'extension' | 'chatgpt' | 'claude' | 'gemini'
   sessionId?: string
   originalMessageIds?: {
     questionId: string

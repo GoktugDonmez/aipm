@@ -77,7 +77,7 @@ export interface QAPair {
   sessionId: string // Reference to original ChatGPT session (if applicable)
   question: string // User's question
   answer: string // Assistant's answer
-  source: 'import' | 'manual' | 'extension'
+  source: 'import' | 'manual' | 'extension' | 'chatgpt' | 'claude' | 'gemini'
   createdAt: Date
   updatedAt: Date
   

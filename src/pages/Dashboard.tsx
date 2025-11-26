@@ -81,7 +81,7 @@ export default function Dashboard() {
               
               <Card variant="surface">
                 <Flex direction="column" gap="0">
-                  {sessions.slice(0, 5).map((session, idx) => (
+                  {sessions.map((session, idx) => (
                     <Flex key={session.id} direction="column">
                       {idx > 0 && (
                         <div style={{ 
@@ -107,14 +107,23 @@ export default function Dashboard() {
                       >
                         <Flex justify="between" align="start" style={{ width: '100%' }}>
                           <Flex direction="column" gap="1" style={{ flex: 1 }}>
-                            <Text weight="medium" size="3" style={{
-                              display: '-webkit-box',
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: 'vertical',
-                              overflow: 'hidden',
-                            }}>
-                              {session.title}
-                            </Text>
+                            <Flex align="center" gap="2">
+                              <Text weight="medium" size="3" style={{
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                              }}>
+                                {session.title}
+                              </Text>
+                              <Badge variant="surface" color={
+                                session.source === 'chatgpt' ? 'green' : 
+                                session.source === 'claude' ? 'orange' : 
+                                session.source === 'gemini' ? 'blue' : 'gray'
+                              } size="1">
+                                {session.source}
+                              </Badge>
+                            </Flex>
                             <Text size="2" color="gray">
                               {session.messageCount} interactions · {session.updatedAt.toLocaleDateString()}
                             </Text>

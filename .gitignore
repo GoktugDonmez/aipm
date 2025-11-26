@@ -34,3 +34,10 @@ experiments
 server/node_modules
 server/dist
 server/.env
+
+
+# Testing files
+gemini-testing_files
+claude-testing_files
+gemini-testing.html
+claude-testing.html

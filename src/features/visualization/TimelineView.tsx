@@ -32,7 +32,11 @@ export default function TimelineView({ entries }: TimelineViewProps) {
                         {entry.title}
                       </Text>
                     </Flex>
-                    <Badge color="blue">
+                    <Badge color={
+                      (entry.metadata.source as string) === 'chatgpt' ? 'green' : 
+                      (entry.metadata.source as string) === 'claude' ? 'orange' : 
+                      (entry.metadata.source as string) === 'gemini' ? 'blue' : 'gray'
+                    }>
                       {entry.metadata.source as string}
                     </Badge>
                   </Flex>
