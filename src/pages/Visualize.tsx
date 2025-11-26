@@ -99,6 +99,20 @@ export default function Visualize() {
 
   const sessionMap = useMemo(() => new Map(sessions.map(session => [session.id, session])), [sessions])
 
+  // Create stable dependency keys to prevent infinite loops
+  const filteredSessionIds = useMemo(() => 
+    filteredSessions.map(s => s.id).sort().join(','), 
+    [filteredSessions]
+  )
+  const selectedTagsKey = useMemo(() => 
+    [...selectedTags].sort().join(','), 
+    [selectedTags]
+  )
+  const tagsKey = useMemo(() => 
+    (tags || []).map(t => t.id).sort().join(','), 
+    [tags]
+  )
+
   const toggleTag = (tag: string) => {
     setSelectedTags(prev => (
       prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
@@ -136,7 +150,7 @@ export default function Visualize() {
     }
 
     loadData()
-  }, [filteredSessions, tags, graphOptions])
+  }, [filteredSessionIds, tagsKey, selectedTagsKey, includeSharedEdges, minSharedTags])
 
   const handleNodeClick = (node: GraphNode) => {
     if (node.type !== 'session') return
