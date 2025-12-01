@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Heading, Text, Card, Tabs, Flex, Button, Select, Switch } from '@radix-ui/themes'
+import { Text, Card, Tabs, Flex, Button, Select, Switch, Badge, IconButton, Tooltip } from '@radix-ui/themes'
 import { useSessions } from '@/lib/hooks'
 import {
   generateGraphData,
@@ -15,6 +15,18 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/lib/db'
 import ConversationModal from '@/components/ConversationModal'
 import { ChatSession } from '@/types'
+import {
+  Search,
+  Tag,
+  Database,
+  Calendar,
+  Sparkles,
+  Info,
+  RefreshCw,
+  Filter,
+  X
+} from 'lucide-react'
+import '../features/visualization/Visualize.css'
 
 const SOURCE_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'chatgpt', label: 'ChatGPT' },
@@ -31,6 +43,12 @@ type Timeframe = 'all' | '7d' | '30d' | '90d'
 export default function Visualize() {
   const { sessions } = useSessions()
   const tags = useLiveQuery(() => db.tags.toArray())
+
+  // UI State
+  const [showHelp, setShowHelp] = useState(false)
+  const [tagSearchQuery, setTagSearchQuery] = useState('')
+
+  // Data State
   const [graphData, setGraphData] = useState<VisualizationData>({
     nodes: [],
     edges: [],
@@ -48,6 +66,7 @@ export default function Visualize() {
   const [layoutStrategy, setLayoutStrategy] = useState<LayoutStrategy>('balanced')
   const [selectedSession, setSelectedSession] = useState<ChatSession | null>(null)
 
+  // Tag Statistics
   const tagStats = useMemo(() => {
     const counts = new Map<string, number>()
     sessions.forEach(session => {
@@ -57,9 +76,17 @@ export default function Visualize() {
     })
     return Array.from(counts.entries())
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 30)
+      .slice(0, 50)
   }, [sessions])
 
+  // Filtered Tags for Search
+  const filteredTags = useMemo(() => {
+    if (!tagSearchQuery.trim()) return tagStats
+    const query = tagSearchQuery.toLowerCase()
+    return tagStats.filter(([tag]) => tag.toLowerCase().includes(query))
+  }, [tagStats, tagSearchQuery])
+
+  // Filtered Sessions
   const filteredSessions = useMemo(() => {
     const bySource = sessions.filter(session => {
       if (selectedSources.size === 0) return true
@@ -100,23 +127,24 @@ export default function Visualize() {
   const sessionMap = useMemo(() => new Map(sessions.map(session => [session.id, session])), [sessions])
 
   // Create stable dependency keys to prevent infinite loops
-  const filteredSessionIds = useMemo(() => 
-    filteredSessions.map(s => s.id).sort().join(','), 
+  const filteredSessionIds = useMemo(() =>
+    filteredSessions.map(s => s.id).sort().join(','),
     [filteredSessions]
   )
-  const selectedTagsKey = useMemo(() => 
-    [...selectedTags].sort().join(','), 
+  const selectedTagsKey = useMemo(() =>
+    [...selectedTags].sort().join(','),
     [selectedTags]
   )
-  const tagsKey = useMemo(() => 
-    (tags || []).map(t => t.id).sort().join(','), 
+  const tagsKey = useMemo(() =>
+    (tags || []).map(t => t.id).sort().join(','),
     [tags]
   )
 
+  // Toggle Functions
   const toggleTag = (tag: string) => {
-    setSelectedTags(prev => (
+    setSelectedTags(prev =>
       prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
-    ))
+    )
   }
 
   const toggleSource = (source: string) => {
@@ -131,6 +159,16 @@ export default function Visualize() {
     })
   }
 
+  const resetFilters = () => {
+    setSelectedTags([])
+    setSelectedSources(new Set())
+    setTimeframe('all')
+    setTagSearchQuery('')
+  }
+
+  const hasActiveFilters = selectedTags.length > 0 || selectedSources.size > 0 || timeframe !== 'all'
+
+  // Load Data
   useEffect(() => {
     if (filteredSessions.length === 0) {
       setGraphData({
@@ -160,212 +198,311 @@ export default function Visualize() {
     }
   }
 
+  // Empty State
   if (sessions.length === 0) {
     return (
-      <div>
-        <Heading size="8" mb="2">
-          Visualize
-        </Heading>
-        <Text size="3" color="gray" mb="6">
-          Explore your knowledge graph and timeline
+      <div className="viz-empty-state">
+        <div className="viz-empty-icon">
+          <Database size={40} color="var(--accent-9)" />
+        </div>
+        <Text size="5" weight="bold">No Data Yet</Text>
+        <Text size="3" color="gray" style={{ maxWidth: 400 }}>
+          Import some conversations to start visualizing your knowledge graph and timeline.
         </Text>
-        <Card>
-          <Text color="gray" align="center">
-            No data to visualize yet. Import some conversations to get started!
-          </Text>
-        </Card>
+        <Button size="3">
+          <Database size={16} />
+          Go to Dashboard
+        </Button>
       </div>
     )
   }
 
   return (
-    <div>
-      <Heading size="8" mb="2">
-        Visualize
-      </Heading>
-      <Text size="3" color="gray" mb="6">
-        Explore your knowledge graph and timeline
-      </Text>
+    <div className="visualize-page">
+      {/* Collapsible Sidebar */}
+      <aside className="filter-sidebar">
+        <div className="filter-sidebar-header">
+          <Flex justify="between" align="center" mb="2">
+            <Flex align="center" gap="2">
+              <Filter size={20} color="var(--accent-9)" />
+              <Text size="4" weight="bold">Filters</Text>
+            </Flex>
+          </Flex>
+          {hasActiveFilters && (
+            <Button variant="soft" size="1" onClick={resetFilters} style={{ width: '100%' }}>
+              <RefreshCw size={14} />
+              Reset All Filters
+            </Button>
+          )}
+        </div>
 
-      <Card mb="4">
-        <Flex direction="column" gap="3">
-          <Text size="3" weight="bold">
-            Filters
-          </Text>
-
-          <Flex direction="column" gap="2">
-            <Text size="2" weight="medium">
-              Tags
-            </Text>
-            <Flex gap="2" wrap="wrap">
-              {tagStats.length === 0 && (
-                <Text size="2" color="gray">No tags available yet.</Text>
-              )}
-              {tagStats.map(([tag, count]) => {
-                const isActive = selectedTags.includes(tag)
-                return (
-                  <Button
-                    key={tag}
-                    variant={isActive ? 'solid' : 'soft'}
-                    size="1"
-                    onClick={() => toggleTag(tag)}
-                  >
-                    {tag} ({count})
-                  </Button>
-                )
-              })}
+        <div className="filter-sidebar-content">
+          {/* Tags Filter */}
+          <div className="filter-group">
+            <div className="filter-group-header">
+              <Tag size={16} className="filter-group-icon" />
+              <span>Tags</span>
               {selectedTags.length > 0 && (
-                <Button variant="ghost" size="1" onClick={() => setSelectedTags([])}>
-                  Clear Tags
-                </Button>
+                <Badge size="1" color="blue">{selectedTags.length}</Badge>
               )}
-            </Flex>
-          </Flex>
+            </div>
 
-          <Flex direction="column" gap="2">
-            <Text size="2" weight="medium">
-              Sources
-            </Text>
-            <Flex gap="2" wrap="wrap">
-              {SOURCE_OPTIONS.map(option => {
-                const isActive = selectedSources.has(option.value)
-                return (
-                  <Button
-                    key={option.value}
-                    variant={isActive ? 'solid' : 'soft'}
-                    size="1"
-                    onClick={() => toggleSource(option.value)}
-                  >
-                    {option.label}
-                  </Button>
-                )
-              })}
-              {selectedSources.size > 0 && (
-                <Button variant="ghost" size="1" onClick={() => setSelectedSources(new Set())}>
-                  Clear Sources
-                </Button>
-              )}
-            </Flex>
-          </Flex>
-
-          <Flex gap="4" wrap="wrap" align="center">
-            <Flex direction="column" gap="1">
-              <Text size="2" weight="medium">
-                Time Range
-              </Text>
-              <Select.Root value={timeframe} onValueChange={value => setTimeframe(value as Timeframe)}>
-                <Select.Trigger />
-                <Select.Content>
-                  <Select.Item value="all">All Time</Select.Item>
-                  <Select.Item value="7d">Last 7 days</Select.Item>
-                  <Select.Item value="30d">Last 30 days</Select.Item>
-                  <Select.Item value="90d">Last 90 days</Select.Item>
-                </Select.Content>
-              </Select.Root>
-            </Flex>
-
-            <Flex direction="column" gap="1">
-              <Text size="2" weight="medium">
-                Shared Tag Edges
-              </Text>
-              <Flex align="center" gap="2">
-                <Switch checked={includeSharedEdges} onCheckedChange={checked => setIncludeSharedEdges(Boolean(checked))} />
-                <Text size="2" color="gray">
-                  Connect sessions sharing tags
-                </Text>
-              </Flex>
-            </Flex>
-
-            <Flex direction="column" gap="1">
-              <Text size="2" weight="medium">
-                Min Shared Tags
-              </Text>
-              <Select.Root
-                value={String(minSharedTags)}
-                onValueChange={value => setMinSharedTags(Number(value))}
-                disabled={!includeSharedEdges}
-              >
-                <Select.Trigger />
-                <Select.Content>
-                  <Select.Item value="1">1</Select.Item>
-                  <Select.Item value="2">2</Select.Item>
-                  <Select.Item value="3">3</Select.Item>
-                </Select.Content>
-              </Select.Root>
-            </Flex>
-
-            <Flex direction="column" gap="1">
-              <Text size="2" weight="medium">
-                Layout Strategy
-              </Text>
-              <Select.Root value={layoutStrategy} onValueChange={value => setLayoutStrategy(value as LayoutStrategy)}>
-                <Select.Trigger />
-                <Select.Content>
-                  <Select.Item value="balanced">Balanced Force</Select.Item>
-                  <Select.Item value="tagOrbit">Tag Orbit</Select.Item>
-                  <Select.Item value="splitByType">Split by Type</Select.Item>
-                </Select.Content>
-              </Select.Root>
-            </Flex>
-          </Flex>
-        </Flex>
-      </Card>
-
-      <Tabs.Root defaultValue="graph">
-        <Tabs.List>
-          <Tabs.Trigger value="graph">Knowledge Graph</Tabs.Trigger>
-          <Tabs.Trigger value="timeline">Timeline</Tabs.Trigger>
-        </Tabs.List>
-
-        <Tabs.Content value="graph">
-          <Card mt="4">
-            <Flex direction="column" gap="3">
-              <Flex justify="between" align="center">
-                <Text size="3" weight="bold">
-                  Knowledge Graph
-                </Text>
-                <Text size="2" color="gray">
-                  {graphData.nodes.length} nodes · {graphData.edges.length} connections
-                </Text>
-              </Flex>
-
-              <Text size="2" color="gray">
-                Drag nodes to explore connections. Scroll to zoom. Green circles are conversations, orange are shared concepts.
-              </Text>
-
-              {graphData.meta.hiddenSessions > 0 && (
-                <Text size="2" color="gray">
-                  Showing the most relevant {graphData.meta.totalSessions - graphData.meta.hiddenSessions} of {graphData.meta.totalSessions} sessions for the selected filters.
-                </Text>
-              )}
-
-              <NetworkGraph
-                nodes={graphData.nodes}
-                edges={graphData.edges}
-                width={Math.min(window.innerWidth - 300, 1200)}
-                height={600}
-                layout={layoutStrategy}
-                onNodeClick={handleNodeClick}
+            <div className="filter-search">
+              <input
+                type="text"
+                placeholder="Search tags..."
+                value={tagSearchQuery}
+                onChange={(e) => setTagSearchQuery(e.target.value)}
               />
-            </Flex>
-          </Card>
-        </Tabs.Content>
+            </div>
 
-        <Tabs.Content value="timeline">
-          <Card mt="4">
+            <div className="filter-chips">
+              {filteredTags.length === 0 && (
+                <Text size="2" color="gray">No tags found</Text>
+              )}
+              {filteredTags.slice(0, 20).map(([tag, count]) => (
+                <div
+                  key={tag}
+                  className={`filter-chip ${selectedTags.includes(tag) ? 'active' : 'inactive'}`}
+                  onClick={() => toggleTag(tag)}
+                >
+                  <span>{tag}</span>
+                  <span className="filter-chip-count">{count}</span>
+                </div>
+              ))}
+            </div>
+
+            {selectedTags.length > 0 && (
+              <Button
+                variant="ghost"
+                size="1"
+                onClick={() => setSelectedTags([])}
+                style={{ marginTop: '0.5rem', width: '100%' }}
+              >
+                Clear Tags
+              </Button>
+            )}
+          </div>
+
+          {/* Sources Filter */}
+          <div className="filter-group">
+            <div className="filter-group-header">
+              <Database size={16} className="filter-group-icon" />
+              <span>Sources</span>
+              {selectedSources.size > 0 && (
+                <Badge size="1" color="blue">{selectedSources.size}</Badge>
+              )}
+            </div>
+
+            <div className="filter-chips">
+              {SOURCE_OPTIONS.map(option => (
+                <div
+                  key={option.value}
+                  className={`filter-chip ${selectedSources.has(option.value) ? 'active' : 'inactive'}`}
+                  onClick={() => toggleSource(option.value)}
+                >
+                  <span>{option.label}</span>
+                </div>
+              ))}
+            </div>
+
+            {selectedSources.size > 0 && (
+              <Button
+                variant="ghost"
+                size="1"
+                onClick={() => setSelectedSources(new Set())}
+                style={{ marginTop: '0.5rem', width: '100%' }}
+              >
+                Clear Sources
+              </Button>
+            )}
+          </div>
+
+          {/* Time Range */}
+          <div className="filter-group">
+            <div className="filter-group-header">
+              <Calendar size={16} className="filter-group-icon" />
+              <span>Time Range</span>
+            </div>
+            <Select.Root value={timeframe} onValueChange={value => setTimeframe(value as Timeframe)}>
+              <Select.Trigger style={{ width: '100%' }} />
+              <Select.Content>
+                <Select.Item value="all">All Time</Select.Item>
+                <Select.Item value="7d">Last 7 days</Select.Item>
+                <Select.Item value="30d">Last 30 days</Select.Item>
+                <Select.Item value="90d">Last 90 days</Select.Item>
+              </Select.Content>
+            </Select.Root>
+          </div>
+
+          {/* Graph Options */}
+          <div className="filter-group">
+            <div className="filter-group-header">
+              <Sparkles size={16} className="filter-group-icon" />
+              <span>Graph Options</span>
+            </div>
+
             <Flex direction="column" gap="3">
-              <Text size="3" weight="bold">
-                Conversation Timeline
-              </Text>
-              <Text size="2" color="gray" mb="2">
-                Chronological view of all your conversations
-              </Text>
-              <TimelineView entries={timelineData} />
-            </Flex>
-          </Card>
-        </Tabs.Content>
-      </Tabs.Root>
+              <Flex direction="column" gap="2">
+                <Text size="2" weight="medium">Shared Tag Connections</Text>
+                <Flex align="center" gap="2">
+                  <Switch
+                    checked={includeSharedEdges}
+                    onCheckedChange={checked => setIncludeSharedEdges(Boolean(checked))}
+                  />
+                  <Text size="2" color="gray">
+                    Connect similar conversations
+                  </Text>
+                </Flex>
+              </Flex>
 
+              {includeSharedEdges && (
+                <Flex direction="column" gap="2">
+                  <Text size="2" weight="medium">Min Shared Tags</Text>
+                  <Select.Root
+                    value={String(minSharedTags)}
+                    onValueChange={value => setMinSharedTags(Number(value))}
+                  >
+                    <Select.Trigger style={{ width: '100%' }} />
+                    <Select.Content>
+                      <Select.Item value="1">1 tag</Select.Item>
+                      <Select.Item value="2">2 tags</Select.Item>
+                      <Select.Item value="3">3 tags</Select.Item>
+                    </Select.Content>
+                  </Select.Root>
+                </Flex>
+              )}
+
+              <Flex direction="column" gap="2">
+                <Text size="2" weight="medium">Layout Strategy</Text>
+                <Select.Root value={layoutStrategy} onValueChange={value => setLayoutStrategy(value as LayoutStrategy)}>
+                  <Select.Trigger style={{ width: '100%' }} />
+                  <Select.Content>
+                    <Select.Item value="balanced">Balanced Force</Select.Item>
+                    <Select.Item value="tagOrbit">Tag Orbit</Select.Item>
+                    <Select.Item value="splitByType">Split by Type</Select.Item>
+                  </Select.Content>
+                </Select.Root>
+              </Flex>
+            </Flex>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="visualization-content">
+        {/* Header */}
+        <header className="viz-header">
+          <div className="viz-stats">
+            <div className="viz-stat-item">
+              <div className="viz-stat-value">{filteredSessions.length}</div>
+              <div className="viz-stat-label">Conversations</div>
+            </div>
+            <div className="viz-stat-item">
+              <div className="viz-stat-value">{graphData.nodes.length}</div>
+              <div className="viz-stat-label">Nodes</div>
+            </div>
+            <div className="viz-stat-item">
+              <div className="viz-stat-value">{graphData.edges.length}</div>
+              <div className="viz-stat-label">Connections</div>
+            </div>
+          </div>
+
+          <div className="viz-actions">
+            <Tooltip content="Show help">
+              <IconButton
+                variant="soft"
+                onClick={() => setShowHelp(!showHelp)}
+              >
+                <Info size={18} />
+              </IconButton>
+            </Tooltip>
+          </div>
+        </header>
+
+        {/* Canvas */}
+        <div className="viz-canvas">
+          {showHelp && (
+            <div className="viz-help-tooltip">
+              <Flex direction="column" gap="2">
+                <Flex justify="between" align="center">
+                  <Text size="2" weight="bold">💡 Quick Guide</Text>
+                  <IconButton variant="ghost" size="1" onClick={() => setShowHelp(false)}>
+                    <X size={14} />
+                  </IconButton>
+                </Flex>
+                <Text size="1">• <strong>Drag</strong> nodes to explore connections</Text>
+                <Text size="1">• <strong>Scroll</strong> to zoom in/out</Text>
+                <Text size="1">• <strong>Click</strong> a node to view details</Text>
+                <Text size="1">• Green circles = conversations</Text>
+                <Text size="1">• Orange circles = shared concepts</Text>
+              </Flex>
+            </div>
+          )}
+
+          <Tabs.Root defaultValue="graph">
+            <Flex direction="column" style={{ height: '100%', padding: '1rem' }}>
+              <Tabs.List style={{ marginBottom: '1rem' }}>
+                <Tabs.Trigger value="graph">
+                  <Sparkles size={16} />
+                  Knowledge Graph
+                </Tabs.Trigger>
+                <Tabs.Trigger value="timeline">
+                  <Calendar size={16} />
+                  Timeline
+                </Tabs.Trigger>
+              </Tabs.List>
+
+              <Tabs.Content value="graph" style={{ flex: 1 }}>
+                {filteredSessions.length === 0 ? (
+                  <div className="viz-empty-state">
+                    <div className="viz-empty-icon">
+                      <Search size={40} color="var(--accent-9)" />
+                    </div>
+                    <Text size="4" weight="bold">No Matching Conversations</Text>
+                    <Text size="2" color="gray">
+                      Try adjusting your filters to see more data.
+                    </Text>
+                    <Button variant="soft" onClick={resetFilters}>
+                      <RefreshCw size={16} />
+                      Reset Filters
+                    </Button>
+                  </div>
+                ) : (
+                  <NetworkGraph
+                    nodes={graphData.nodes}
+                    edges={graphData.edges}
+                    width={window.innerWidth - 400}
+                    height={window.innerHeight - 250}
+                    layout={layoutStrategy}
+                    onNodeClick={handleNodeClick}
+                  />
+                )}
+              </Tabs.Content>
+
+              <Tabs.Content value="timeline" style={{ flex: 1, overflow: 'auto' }}>
+                <Card>
+                  <Flex direction="column" gap="2">
+                    <Text size="3" weight="bold">Conversation Timeline</Text>
+                    <Text size="2" color="gray" mb="2">
+                      Chronological view of all your conversations
+                    </Text>
+                    {timelineData.length === 0 ? (
+                      <Text size="2" color="gray" align="center" style={{ padding: '2rem' }}>
+                        No timeline data available
+                      </Text>
+                    ) : (
+                      <TimelineView entries={timelineData} />
+                    )}
+                  </Flex>
+                </Card>
+              </Tabs.Content>
+            </Flex>
+          </Tabs.Root>
+        </div>
+      </main>
+
+      {/* Conversation Modal */}
       {selectedSession && (
         <ConversationModal
           session={selectedSession}
@@ -376,4 +513,3 @@ export default function Visualize() {
     </div>
   )
 }
-
