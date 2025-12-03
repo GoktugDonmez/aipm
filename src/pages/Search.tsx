@@ -27,23 +27,38 @@ export default function Search() {
 
   const sessions = useLiveQuery(() => db.sessions.orderBy('updatedAt').reverse().toArray())
   const messages = useLiveQuery(() => db.messages.toArray())
+  const qaPairs = useLiveQuery(() => db.qaPairs.toArray())
   const sessionMap = new Map(sessions?.map(s => [s.id, s]))
 
   // Load all conversations by default
   useEffect(() => {
-    if (!query && sessions && messages) {
+    if (!query && sessions && (messages || qaPairs)) {
       // Create default "results" from all sessions
       const defaultResults: SearchResult[] = sessions.slice(0, 50).map(session => {
-        const sessionMessages = messages.filter(m => m.sessionId === session.id)
-        const preview = sessionMessages
-          .slice(0, 2)
-          .map(m => m.content.substring(0, 100))
-          .join(' ... ')
+        const sessionMessages = messages?.filter(m => m.sessionId === session.id) || []
+        const sessionQAPairs = qaPairs?.filter(p => p.sessionId === session.id) || []
+        
+        let preview = ''
+        let messageId = session.id
+
+        if (sessionMessages.length > 0) {
+          preview = sessionMessages
+            .slice(0, 2)
+            .map(m => m.content.substring(0, 100))
+            .join(' ... ')
+          messageId = sessionMessages[0].id
+        } else if (sessionQAPairs.length > 0) {
+          preview = sessionQAPairs
+            .slice(0, 1)
+            .map(p => `Q: ${p.question.substring(0, 50)}... A: ${p.answer.substring(0, 50)}...`)
+            .join(' ')
+          messageId = sessionQAPairs[0].id
+        }
         
         return {
           id: session.id,
           sessionId: session.id,
-          messageId: sessionMessages[0]?.id || session.id,
+          messageId: messageId,
           snippet: preview || session.title,
           score: 0,
           highlights: [],
@@ -51,7 +66,7 @@ export default function Search() {
       })
       setResults(defaultResults)
     }
-  }, [query, sessions, messages])
+  }, [query, sessions, messages, qaPairs])
 
   const handleSearch = async () => {
     if (!query.trim()) return
@@ -179,7 +194,11 @@ export default function Search() {
                       </Text>
                     </Flex>
                     <Flex gap="2">
-                      <Badge color="blue">{session?.source || 'unknown'}</Badge>
+                      <Badge color={
+                        session?.source === 'chatgpt' ? 'green' : 
+                        session?.source === 'claude' ? 'orange' : 
+                        session?.source === 'gemini' ? 'blue' : 'gray'
+                      }>{session?.source || 'unknown'}</Badge>
                       {query && <Badge variant="soft">Score: {result.score}</Badge>}
                     </Flex>
                   </Flex>

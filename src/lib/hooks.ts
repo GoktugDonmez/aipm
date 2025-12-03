@@ -7,7 +7,7 @@ import { autoTagSessions } from '@/features/tags/taggingService'
 export interface QAConversation {
   id: string
   title: string
-  source: 'import' | 'manual' | 'extension'
+  source: 'chatgpt' | 'claude' | 'gemini' | 'import' | 'manual' | 'extension'
   qaPairCount: number
   createdAt: Date
   updatedAt: Date
@@ -119,7 +119,7 @@ export function useQAPairsBySession(sessionId: string) {
   }
 }
 
-export function useQAPairsBySource(source: 'import' | 'manual' | 'extension') {
+export function useQAPairsBySource(source: 'chatgpt' | 'claude' | 'gemini' | 'import' | 'manual' | 'extension') {
   const qaPairs = useLiveQuery(
     () => db.qaPairs.where('source').equals(source).toArray(),
     [source]

@@ -12,6 +12,7 @@ interface ExtensionData {
   }>
   title: string
   url: string
+  platform?: string // 'chatgpt', 'gemini', 'claude'
   chatgptSessionId?: string | null // ChatGPT conversation ID from URL
   timestamp: number
 }
@@ -31,23 +32,55 @@ export default function ExtensionDataReceiver({ onImportComplete }: { onImportCo
     processedTimestamps.current.add(data.timestamp)
 
     try {
-      // Generate a session ID based on ChatGPT session ID if available
-      // This ensures all interactions from the same ChatGPT conversation are grouped together
-      const sessionId = data.chatgptSessionId 
-        ? `conv-extension-${data.chatgptSessionId}`
+      // Generate a stable session ID
+      // Priority: 
+      // 1. Explicit Session ID (e.g. from ChatGPT URL)
+      // 2. Stable hash of the URL pathname (for Gemini/Claude where ID is in URL)
+      // 3. Random UUID (fallback)
+      
+      let baseId = data.chatgptSessionId;
+      
+      if (!baseId && data.url) {
+        try {
+          const urlObj = new URL(data.url);
+          // Use pathname as the stable identifier base
+          // This ensures multiple saves from the same URL map to the same session
+          // We strip the leading slash and replace non-alphanumeric chars
+          const pathId = urlObj.pathname.replace(/[^a-zA-Z0-9]/g, '');
+          if (pathId.length > 5) { // Ensure we have enough entropy/content
+             baseId = pathId;
+          }
+        } catch (e) {
+          console.warn('Failed to parse URL for session ID generation', e);
+        }
+      }
+
+      const sessionId = baseId 
+        ? `conv-extension-${baseId}`
         : `conv-extension-${crypto.randomUUID()}`
       
+      // Determine source based on platform
+      let source: 'extension' | 'chatgpt' | 'claude' | 'gemini' = 'extension';
+      if (data.platform) {
+        const p = data.platform.toLowerCase();
+        if (p === 'chatgpt') source = 'chatgpt';
+        else if (p === 'claude') source = 'claude';
+        else if (p === 'gemini') source = 'gemini';
+      }
+
       console.log('Importing extension data:', {
         chatgptSessionId: data.chatgptSessionId,
         generatedSessionId: sessionId,
-        qaPairsCount: data.qaPairs.length
+        qaPairsCount: data.qaPairs.length,
+        platform: data.platform,
+        source
       })
       
       const qaPairsToSave: QAPair[] = data.qaPairs.map((pair) =>
         normalizeQAPair({
           question: pair.question,
           answer: pair.answer,
-          source: 'extension',
+          source: source,
           sessionId: sessionId,
           originalMessageIds: {
             questionId: pair.questionId,

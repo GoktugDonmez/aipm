@@ -45,7 +45,11 @@ export default function ConversationModal({ session, open, onClose, onDelete }: 
             <Flex direction="column" gap="2" style={{ flex: 1 }}>
               <Dialog.Title size="6">{session.title}</Dialog.Title>
               <Flex gap="2" wrap="wrap" align="center">
-                <Badge color="blue">{session.source}</Badge>
+                <Badge color={
+                  session.source === 'chatgpt' ? 'green' : 
+                  session.source === 'claude' ? 'orange' : 
+                  session.source === 'gemini' ? 'blue' : 'gray'
+                }>{session.source}</Badge>
                 <Badge variant="soft">{session.messageCount} interactions</Badge>
                 <Badge variant="outline">
                   {session.updatedAt.toLocaleDateString()}

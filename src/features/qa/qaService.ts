@@ -5,7 +5,7 @@ import { autoTagSessions } from '@/features/tags/taggingService'
 export interface QAPairInput {
   question: string
   answer: string
-  source: 'import' | 'manual' | 'extension'
+  source: 'import' | 'manual' | 'extension' | 'chatgpt' | 'claude' | 'gemini'
   sessionId?: string
   originalMessageIds?: {
     questionId: string
@@ -216,7 +216,7 @@ export async function saveQAPairs(qaPairs: QAPair[]): Promise<void> {
   }
   
   // Group pairs by sessionId and create/update ChatSession records
-  const sessionMap = new Map<string, { pairs: QAPair[]; source: 'import' | 'manual' | 'extension' }>()
+  const sessionMap = new Map<string, { pairs: QAPair[]; source: QAPair['source'] }>()
   
   for (const pair of finalUniquePairs) {
     if (!sessionMap.has(pair.sessionId)) {
