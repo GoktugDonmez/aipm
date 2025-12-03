@@ -216,7 +216,7 @@ export async function saveQAPairs(qaPairs: QAPair[]): Promise<void> {
   }
   
   // Group pairs by sessionId and create/update ChatSession records
-  const sessionMap = new Map<string, { pairs: QAPair[]; source: 'import' | 'manual' | 'extension' }>()
+  const sessionMap = new Map<string, { pairs: QAPair[]; source: QAPair['source'] }>()
   
   for (const pair of finalUniquePairs) {
     if (!sessionMap.has(pair.sessionId)) {
