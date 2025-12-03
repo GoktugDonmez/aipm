@@ -29,7 +29,14 @@ export default function Layout({ children }: LayoutProps) {
         }}
       >
         <Flex justify="between" align="center">
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Memoria</h1>
+          <Flex align="center" gap="3">
+            <img
+              src="/memoria_logo_only.png"
+              alt="Memoria Logo"
+              style={{ height: '40px', width: 'auto' }}
+            />
+            <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0, fontFamily: "'Outfit', sans-serif" }}>Memoria</h1>
+          </Flex>
           <Flex gap="4">
             {navItems.map((item) => {
               const Icon = item.icon
