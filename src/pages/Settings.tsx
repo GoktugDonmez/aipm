@@ -16,7 +16,7 @@ export default function Settings() {
       setShowClearDialog(false)
       // Reload page after a short delay to refresh the UI
       setTimeout(() => {
-        window.location.reload()
+        window.location.href = '/'
       }, 1000)
     } catch (error) {
       console.error('Failed to clear database:', error)
