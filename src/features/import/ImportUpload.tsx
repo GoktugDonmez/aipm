@@ -165,10 +165,12 @@ export default function ImportUpload({ onImportComplete }: ImportUploadProps) {
           </Flex>
         </Card>
 
-        <label htmlFor="file-upload">
-          <Button disabled={importing} style={{ cursor: 'pointer', width: '100%' }} size="3" variant="surface">
-            <Upload size={18} />
-            {importing ? 'Importing JSON...' : 'Upload ChatGPT JSON Export'}
+        <label htmlFor="file-upload" style={{ width: '100%', cursor: 'pointer' }}>
+          <Button disabled={importing} style={{ cursor: 'pointer', width: '100%' }} size="3" variant="soft" asChild>
+            <span>
+              <Upload size={18} />
+              {importing ? 'Importing JSON...' : 'Upload ChatGPT JSON Export'}
+            </span>
           </Button>
         </label>
 
