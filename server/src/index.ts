@@ -15,7 +15,8 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173'
 // Middleware
 const allowedOrigins = ['http://localhost:5173', 'http://127.0.0.1:5173']
 if (process.env.FRONTEND_URL) {
-  allowedOrigins.push(process.env.FRONTEND_URL)
+  // Remove trailing slash if present, as Origin headers do not have them
+  allowedOrigins.push(process.env.FRONTEND_URL.replace(/\/$/, ''))
 }
 
 app.use(cors({
