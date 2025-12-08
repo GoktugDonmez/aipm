@@ -1,6 +1,19 @@
 # Backlog
 
+
 ## Completed
+- **Production Deployment & Security Hardening (Dec 8, 2025):**
+  - **Security:** Migrated client-side API key usage (OpenAI, Gemini) to a secure Node.js backend to prevent key leakage.
+  - **Backend:** Deployed Express server to Render.com.
+  - **Frontend:** Deployed React app to Vercel.
+  - **Rate Limiting:** Switched Roadmap generation to `gemini-1.5-flash` to optimize for free-tier quotas and avoid 429 errors.
+  - **CORS:** Configured backend to securely accept requests from the deployed frontend Vercel URL.
+- **Onboarding UX Improvements (Dec 8, 2025):**
+  - **Import Flow:** Redesigned `ImportUpload` to prominently feature the Chrome Extension download.
+  - **Extension:** Packaged Chrome Extension as a downloadable `.tar.gz` and hosted it for easy access.
+  - **Home:** Cleaned up "Mock Data" buttons to be "Try Sample Conversations", improving clarity for new users.
+  - **Data Management:** Fixed page reload issues on data clear for smoother reset experience.
+
 - **Chrome Extension Multi-Platform Support (Nov 26, 2025):**
   - Extended support to Claude and Gemini platforms in addition to ChatGPT
   - Implemented source tracking to automatically tag conversations by platform
