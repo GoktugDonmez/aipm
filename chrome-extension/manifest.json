@@ -21,16 +21,23 @@
         "https://gemini.google.com/*",
         "https://claude.ai/*"
       ],
-      "js": ["content.js"],
-      "css": ["content.css"],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
       "run_at": "document_end"
     },
     {
       "matches": [
         "http://localhost:*/*",
-        "http://127.0.0.1:*/*"
+        "http://127.0.0.1:*/*",
+        "https://memoria-ashen.vercel.app/*"
       ],
-      "js": ["memoria-bridge.js"],
+      "js": [
+        "memoria-bridge.js"
+      ],
       "run_at": "document_start"
     }
   ],

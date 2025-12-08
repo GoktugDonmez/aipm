@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Card, Button, Flex, Text, Progress } from '@radix-ui/themes'
-import { Upload, Soup, Wrench } from 'lucide-react'
+import { Card, Button, Flex, Text, Progress, Link } from '@radix-ui/themes'
+import { Upload, Soup, Wrench, Puzzle, ExternalLink } from 'lucide-react'
 import { ChatGPTImportAdapter, importFile, parseFileForQAPairs, ExtractedQAPair } from './importService'
 import QASelectionModal from './QASelectionModal'
 import cookingMocks from '@/mocks/chatgpt-cooking-conversations.json'
@@ -31,11 +31,11 @@ export default function ImportUpload({ onImportComplete }: ImportUploadProps) {
 
     try {
       const adapter = new ChatGPTImportAdapter()
-      
+
       // First, parse the file to extract QA pairs
       setProgress(20)
       const qaPairs = await parseFileForQAPairs(file, adapter)
-      
+
       if (qaPairs.length > 0) {
         // Show QA selection modal
         setExtractedQAPairs(qaPairs)
@@ -115,7 +115,7 @@ export default function ImportUpload({ onImportComplete }: ImportUploadProps) {
             Import Conversations
           </Text>
         </Flex>
-        
+
         <Text color="gray">
           Import your ChatGPT conversations to build your knowledge base.
           Export your chats from ChatGPT and upload the JSON file.
@@ -136,6 +136,42 @@ export default function ImportUpload({ onImportComplete }: ImportUploadProps) {
           </Flex>
         )}
 
+        <Card variant="surface" style={{ padding: '16px' }}>
+          <Flex gap="3" align="center">
+            <Flex
+              align="center"
+              justify="center"
+              style={{
+                minWidth: '40px',
+                height: '40px',
+                borderRadius: '50%',
+                backgroundColor: 'var(--accent-9)',
+                color: 'white'
+              }}
+            >
+              <Puzzle size={24} />
+            </Flex>
+            <Flex direction="column" gap="1">
+              <Text weight="bold" size="2">Get the Memoria Chrome Extension</Text>
+              <Text size="2" color="gray">
+                Import chats directly from ChatGPT or Gemini on browser. Download the zip file, extract it, and load it as an "Unpacked Extension" in Chrome.
+              </Text>
+              <Link href="/memoria-extension.zip" download="memoria-extension.zip">
+                <Button size="1" variant="ghost" style={{ padding: 0, justifyContent: 'flex-start', marginTop: '4px' }}>
+                  Download Extension <ExternalLink size={12} style={{ marginLeft: '2px' }} />
+                </Button>
+              </Link>
+            </Flex>
+          </Flex>
+        </Card>
+
+        <label htmlFor="file-upload">
+          <Button disabled={importing} style={{ cursor: 'pointer', width: '100%' }} size="3" variant="surface">
+            <Upload size={18} />
+            {importing ? 'Importing JSON...' : 'Upload ChatGPT JSON Export'}
+          </Button>
+        </label>
+
         <input
           type="file"
           accept=".json"
@@ -144,35 +180,29 @@ export default function ImportUpload({ onImportComplete }: ImportUploadProps) {
           style={{ display: 'none' }}
           id="file-upload"
         />
-        
-        <label htmlFor="file-upload">
-          <Button disabled={importing} style={{ cursor: 'pointer' }} asChild>
-            <span>
-              <Upload size={16} />
-              {importing ? 'Importing...' : 'Choose File'}
-            </span>
-          </Button>
-        </label>
 
-        <Flex gap="2" wrap="wrap">
-          <Button
-            variant="soft"
-            size="2"
-            onClick={handleLoadCookingMocks}
-            disabled={importing}
-          >
-            <Soup size={16} />
-            Load Cooking Mock Data
-          </Button>
-          <Button
-            variant="soft"
-            size="2"
-            onClick={handleLoadCarMocks}
-            disabled={importing}
-          >
-            <Wrench size={16} />
-            Load Car Repair Mock Data
-          </Button>
+        <Flex gap="2" direction="column">
+          <Text size="2" weight="medium">No data? Try sample conversations:</Text>
+          <Flex gap="2" wrap="wrap">
+            <Button
+              variant="outline"
+              size="2"
+              onClick={handleLoadCookingMocks}
+              disabled={importing}
+            >
+              <Soup size={16} />
+              Try "Cooking Questions"
+            </Button>
+            <Button
+              variant="outline"
+              size="2"
+              onClick={handleLoadCarMocks}
+              disabled={importing}
+            >
+              <Wrench size={16} />
+              Try "Car Repair"
+            </Button>
+          </Flex>
         </Flex>
 
         {pendingMockFilename && (
